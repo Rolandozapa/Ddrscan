@@ -223,57 +223,146 @@ crypto_service = CryptoAPIService()
 class CryptoScoringService:
     @staticmethod
     def calculate_performance_score(percent_change: float) -> float:
-        """Calculate performance score based on percentage change"""
+        """Calculate performance score based on percentage change with improved scaling"""
         if percent_change is None:
             return 0.0
-        # Normalize between 0-100, with positive returns getting higher scores
-        # Cap at reasonable bounds to avoid extreme outliers
-        capped_change = max(-95, min(1000, percent_change))
-        # Transform to 0-100 scale
-        return max(0, min(100, (capped_change + 95) / 1095 * 100))
+        
+        # Improved scoring with better distribution
+        # Use sigmoid-like function for more realistic scoring
+        capped_change = max(-95, min(2000, percent_change))
+        
+        if capped_change >= 0:
+            # Positive performance: logarithmic scaling to prevent extreme scores
+            score = 50 + (math.log(1 + capped_change/10) * 15)
+        else:
+            # Negative performance: linear penalty
+            score = 50 + (capped_change * 0.4)
+        
+        return max(0, min(100, score))
     
     @staticmethod
-    def calculate_drawdown_score(percent_change: float, volatility_proxy: float) -> float:
-        """Calculate drawdown score - higher score for lower drawdown"""
+    def calculate_drawdown_score(percent_change: float, volatility_proxy: float, period: TimePeriod) -> float:
+        """Calculate drawdown score with period-specific adjustments"""
         if percent_change is None:
             return 50.0
         
-        # Estimate drawdown based on volatility and current performance
-        estimated_drawdown = abs(percent_change) * volatility_proxy
-        # Higher score for lower estimated drawdown
-        return max(0, min(100, 100 - (estimated_drawdown / 100 * 100)))
+        # Period-specific risk adjustments
+        period_multiplier = {
+            TimePeriod.TWENTY_FOUR_HOURS: 1.0,
+            TimePeriod.ONE_WEEK: 0.9,
+            TimePeriod.ONE_MONTH: 0.8,
+            TimePeriod.THREE_MONTHS: 0.7,
+            TimePeriod.SIX_MONTHS: 0.65,
+            TimePeriod.NINE_MONTHS: 0.6,
+            TimePeriod.ONE_YEAR: 0.55
+        }.get(period, 0.8)
+        
+        # Estimate maximum drawdown based on volatility and performance
+        volatility_factor = min(3.0, volatility_proxy * 2)
+        estimated_max_drawdown = abs(percent_change) * volatility_factor * period_multiplier
+        
+        # Convert to score (lower drawdown = higher score)
+        if estimated_max_drawdown <= 10:
+            score = 95 - (estimated_max_drawdown * 2)
+        elif estimated_max_drawdown <= 30:
+            score = 75 - ((estimated_max_drawdown - 10) * 1.5)
+        elif estimated_max_drawdown <= 60:
+            score = 45 - ((estimated_max_drawdown - 30) * 1.0)
+        else:
+            score = max(0, 15 - ((estimated_max_drawdown - 60) * 0.3))
+        
+        return max(0, min(100, score))
     
     @staticmethod
-    def calculate_rebound_potential_score(current_change: float, market_cap: float) -> float:
-        """Calculate rebound potential based on current position and market cap"""
+    def calculate_rebound_potential_score(current_change: float, market_cap: float, period: TimePeriod) -> float:
+        """Enhanced rebound potential calculation considering market cycles"""
         if current_change is None:
             return 50.0
         
-        # Lower market cap coins have higher rebound potential when down
-        market_cap_factor = min(1.0, 10_000_000_000 / max(market_cap, 1_000_000))
+        # Market cap factor (smaller = higher rebound potential when down)
+        if market_cap > 50_000_000_000:  # >50B (BTC, ETH tier)
+            market_cap_factor = 0.7
+            base_rebound = 40
+        elif market_cap > 10_000_000_000:  # 10-50B
+            market_cap_factor = 0.8
+            base_rebound = 45
+        elif market_cap > 1_000_000_000:   # 1-10B
+            market_cap_factor = 1.0
+            base_rebound = 50
+        elif market_cap > 100_000_000:     # 100M-1B
+            market_cap_factor = 1.3
+            base_rebound = 55
+        else:  # <100M
+            market_cap_factor = 1.6
+            base_rebound = 60
         
-        if current_change < -20:  # Significant drop
-            base_score = 80
-        elif current_change < -10:  # Moderate drop
-            base_score = 65
-        elif current_change < 0:  # Small drop
-            base_score = 55
-        else:  # Positive performance
-            base_score = 40
+        # Period-specific rebound assessment
+        period_factor = {
+            TimePeriod.TWENTY_FOUR_HOURS: 0.8,  # Short-term noise
+            TimePeriod.ONE_WEEK: 0.9,
+            TimePeriod.ONE_MONTH: 1.0,
+            TimePeriod.THREE_MONTHS: 1.2,       # Good indicator of trend reversal
+            TimePeriod.SIX_MONTHS: 1.1,
+            TimePeriod.NINE_MONTHS: 1.0,
+            TimePeriod.ONE_YEAR: 0.9            # Long-term trends harder to reverse
+        }.get(period, 1.0)
         
-        # Apply market cap factor
-        return min(100, base_score + (market_cap_factor * 20))
+        # Calculate rebound score based on current position
+        if current_change <= -50:  # Severe decline
+            rebound_score = base_rebound + (40 * market_cap_factor * period_factor)
+        elif current_change <= -30:  # Significant decline
+            rebound_score = base_rebound + (30 * market_cap_factor * period_factor)
+        elif current_change <= -15:  # Moderate decline
+            rebound_score = base_rebound + (20 * market_cap_factor * period_factor)
+        elif current_change <= -5:   # Minor decline
+            rebound_score = base_rebound + (10 * market_cap_factor * period_factor)
+        elif current_change <= 10:   # Slight positive
+            rebound_score = base_rebound + (5 * market_cap_factor)
+        else:  # Strong positive performance
+            rebound_score = base_rebound - (current_change * 0.3)  # Less rebound potential when already up
+        
+        return max(0, min(100, rebound_score))
     
     @staticmethod
-    def calculate_momentum_score(short_change: float, long_change: float) -> float:
-        """Calculate momentum score based on recent vs longer term performance"""
+    def calculate_momentum_score(short_change: float, long_change: float, period: TimePeriod) -> float:
+        """Enhanced momentum calculation with trend analysis"""
         if short_change is None or long_change is None:
             return 50.0
         
-        # Momentum = recent performance relative to longer term
-        momentum = short_change - long_change
-        # Normalize to 0-100 scale
-        return max(0, min(100, (momentum + 50) / 100 * 100))
+        # Calculate momentum differential
+        momentum_diff = short_change - long_change
+        
+        # Period-specific momentum interpretation
+        if period in [TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK]:
+            # For short periods, compare with 30d trend
+            reference_period = "medium_term"
+        else:
+            # For longer periods, compare recent vs period performance
+            reference_period = "long_term"
+        
+        # Momentum scoring
+        if momentum_diff > 20:      # Strong positive momentum
+            base_score = 85
+        elif momentum_diff > 10:    # Good momentum
+            base_score = 70
+        elif momentum_diff > 0:     # Slight positive momentum
+            base_score = 60
+        elif momentum_diff > -10:   # Slight negative momentum
+            base_score = 40
+        elif momentum_diff > -20:   # Negative momentum
+            base_score = 25
+        else:                       # Strong negative momentum
+            base_score = 10
+        
+        # Add trend consistency bonus/penalty
+        if (short_change > 0 and long_change > 0) or (short_change < 0 and long_change < 0):
+            # Consistent trend direction
+            consistency_bonus = 5
+        else:
+            # Trend reversal (could be opportunity)
+            consistency_bonus = -5 if period in [TimePeriod.TWENTY_FOUR_HOURS] else 10
+        
+        return max(0, min(100, base_score + consistency_bonus))
 
 scoring_service = CryptoScoringService()
 
