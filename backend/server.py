@@ -70,6 +70,7 @@ class CryptoScore(BaseModel):
     price: float
     period: TimePeriod
     period_performance: Optional[float] = None  # Actual % change for the period
+    data_source: str = "calculated"  # "direct", "coingecko", "calculated"
     performance_score: float
     drawdown_score: float
     rebound_potential_score: float
