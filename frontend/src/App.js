@@ -69,6 +69,11 @@ const CryptoRankingApp = () => {
     return num?.toFixed(2) || '0';
   };
 
+  const formatPrice = (price) => {
+    if (price >= 1) return `$${price.toFixed(2)}`;
+    return `$${price.toFixed(6)}`;
+  };
+
   const formatPerformance = (performance) => {
     if (performance === null || performance === undefined) return 'N/A';
     const value = parseFloat(performance);
