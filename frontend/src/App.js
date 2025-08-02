@@ -69,9 +69,12 @@ const CryptoRankingApp = () => {
     return num?.toFixed(2) || '0';
   };
 
-  const formatPrice = (price) => {
-    if (price >= 1) return `$${price.toFixed(2)}`;
-    return `$${price.toFixed(6)}`;
+  const formatPerformance = (performance) => {
+    if (performance === null || performance === undefined) return 'N/A';
+    const value = parseFloat(performance);
+    const sign = value >= 0 ? '+' : '';
+    const color = value >= 0 ? 'text-green-400' : 'text-red-400';
+    return <span className={color}>{sign}{value.toFixed(2)}%</span>;
   };
 
   const getScoreColor = (score) => {
