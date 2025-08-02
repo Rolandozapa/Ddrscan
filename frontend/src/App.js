@@ -238,25 +238,56 @@ const CryptoRankingApp = () => {
           </div>
         )}
 
-        {/* Legend */}
+        {/* Enhanced Legend with Data Source Info */}
         <div className="mt-8 bg-gray-800 rounded-xl p-6">
-          <h3 className="text-white text-xl font-bold mb-4">📋 Légende du Scoring</h3>
-          <div className="grid md:grid-cols-2 gap-4 text-gray-300">
+          <h3 className="text-white text-xl font-bold mb-4">📋 Légende du Scoring Amélioré</h3>
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <h4 className="font-semibold text-blue-400 mb-2">🎯 Score de Performance (25%)</h4>
-              <p className="text-sm">Basé sur la variation de prix de la période sélectionnée</p>
+              <div className="mb-4">
+                <h4 className="font-semibold text-blue-400 mb-2">🎯 Score de Performance (25-30%)</h4>
+                <p className="text-sm text-gray-300">Analyse avancée avec échelle logarithmique pour les performances positives</p>
+              </div>
+              <div className="mb-4">
+                <h4 className="font-semibold text-red-400 mb-2">📉 Score Drawdown (15-25%)</h4>
+                <p className="text-sm text-gray-300">Ajustement selon la période avec facteurs de volatilité</p>
+              </div>
             </div>
             <div>
-              <h4 className="font-semibold text-red-400 mb-2">📉 Score Drawdown (20%)</h4>
-              <p className="text-sm">Évalue la résistance aux chutes de prix</p>
+              <div className="mb-4">
+                <h4 className="font-semibold text-green-400 mb-2">🚀 Potentiel de Rebond (30-40%)</h4>
+                <p className="text-sm text-gray-300">Considère les cycles de marché et la capitalisation</p>
+              </div>
+              <div className="mb-4">
+                <h4 className="font-semibold text-yellow-400 mb-2">⚡ Score Momentum (15-25%)</h4>
+                <p className="text-sm text-gray-300">Analyse multi-période avec détection de tendance</p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-semibold text-green-400 mb-2">🚀 Potentiel de Rebond (35%)</h4>
-              <p className="text-sm">Analyse la capacité de récupération basée sur la position actuelle</p>
+          </div>
+          
+          <div className="mt-6 pt-4 border-t border-gray-700">
+            <h4 className="text-purple-400 font-semibold mb-2">📊 Sources de Données</h4>
+            <div className="grid md:grid-cols-3 gap-4 text-sm">
+              <div className="bg-gray-700 p-3 rounded">
+                <span className="text-green-400 font-semibold">✅ Données directes</span>
+                <p className="text-gray-300 mt-1">24h, 7j, 30j depuis CoinMarketCap</p>
+              </div>
+              <div className="bg-gray-700 p-3 rounded">
+                <span className="text-blue-400 font-semibold">🧮 Calculées par déduction</span>
+                <p className="text-gray-300 mt-1">6 mois, 9 mois, 1 an avec algorithmes avancés</p>
+              </div>
+              <div className="bg-gray-700 p-3 rounded">
+                <span className="text-purple-400 font-semibold">🔄 Système de fallback</span>
+                <p className="text-gray-300 mt-1">CoinGecko pour données historiques manquantes</p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-semibold text-yellow-400 mb-2">⚡ Score Momentum (20%)</h4>
-              <p className="text-sm">Compare les performances récentes vs long terme</p>
+          </div>
+          
+          <div className="mt-4 p-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-lg border border-blue-500/30">
+            <h5 className="text-blue-300 font-semibold mb-2">🎯 Pondérations Dynamiques</h5>
+            <div className="grid md:grid-cols-3 gap-2 text-xs text-gray-300">
+              <div><strong>Court terme (24h-7j):</strong> Focus rebond + momentum</div>
+              <div><strong>Moyen terme (1-3 mois):</strong> Approche équilibrée</div>
+              <div><strong>Long terme (6m-1an):</strong> Performance + résistance</div>
             </div>
           </div>
         </div>
