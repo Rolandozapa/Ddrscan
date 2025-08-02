@@ -138,13 +138,24 @@ class CryptoAPIService:
                         # Add missing historical data
                         quote = enhanced_crypto.get('quote', {}).get('USD', {})
                         
-                        # Fill in missing longer-term data from CoinGecko
-                        if not quote.get('percent_change_180d'):
-                            quote['percent_change_180d'] = coingecko_data.get('percent_change_180d')
-                        if not quote.get('percent_change_365d'):
-                            quote['percent_change_365d'] = coingecko_data.get('percent_change_365d')
+                        # Fill in missing longer-term data from CoinGecko with real historical data
+                        if coingecko_data.get('data_quality') == 'real_historical_data':
+                            if not quote.get('percent_change_180d') and coingecko_data.get('percent_change_180d'):
+                                quote['percent_change_180d'] = coingecko_data.get('percent_change_180d')
+                                logger.info(f"✅ Added REAL 180d data for {crypto.get('symbol')}: {coingecko_data.get('percent_change_180d'):.2f}%")
+                            
+                            if not quote.get('percent_change_270d') and coingecko_data.get('percent_change_270d'):
+                                quote['percent_change_270d'] = coingecko_data.get('percent_change_270d')
+                                logger.info(f"✅ Added REAL 270d data for {crypto.get('symbol')}: {coingecko_data.get('percent_change_270d'):.2f}%")
+                            
+                            if not quote.get('percent_change_365d') and coingecko_data.get('percent_change_365d'):
+                                quote['percent_change_365d'] = coingecko_data.get('percent_change_365d')
+                                logger.info(f"✅ Added REAL 365d data for {crypto.get('symbol')}: {coingecko_data.get('percent_change_365d'):.2f}%")
                         
-                        logger.info(f"Enhanced {crypto.get('symbol')} with CoinGecko historical data")
+                        # Mark the enhanced crypto with data source info
+                        enhanced_crypto['data_sources'] = enhanced_crypto.get('data_sources', ['coinmarketcap'])
+                        if 'coingecko_historical' not in enhanced_crypto['data_sources']:
+                            enhanced_crypto['data_sources'].append('coingecko_historical')
                         
                 except Exception as e:
                     logger.warning(f"Failed to enhance {crypto.get('symbol')} with CoinGecko: {e}")
