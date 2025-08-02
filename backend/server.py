@@ -181,34 +181,46 @@ class CryptoAPIService:
                 if not coin_id:
                     return None
                 
-                # Get historical price data
-                history_url = f"{self.coingecko_base_url}/coins/{coin_id}"
+                # Get historical price data with market_chart endpoint for accurate 1-year data
+                history_url = f"{self.coingecko_base_url}/coins/{coin_id}/market_chart"
                 history_params = {
-                    'localization': 'false',
-                    'tickers': 'false',
-                    'market_data': 'true',
-                    'community_data': 'false',
-                    'developer_data': 'false'
+                    'vs_currency': 'usd',
+                    'days': '365',
+                    'interval': 'daily'
                 }
                 
                 async with session.get(history_url, params=history_params) as history_response:
                     if history_response.status != 200:
+                        logger.warning(f"CoinGecko market_chart failed for {symbol}: {history_response.status}")
                         return None
                     
                     history_data = await history_response.json()
-                    market_data = history_data.get('market_data', {})
+                    prices = history_data.get('prices', [])
                     
-                    # Extract percentage changes
-                    price_changes = market_data.get('price_change_percentage_24h_in_currency', {})
+                    if len(prices) < 2:
+                        return None
+                    
+                    # Calculate actual percentage changes from price data
+                    current_price = prices[-1][1]  # Latest price
+                    price_365d = prices[0][1] if len(prices) >= 365 else prices[0][1]  # 365 days ago
+                    price_180d = prices[len(prices)//2][1] if len(prices) >= 180 else None  # ~6 months ago
+                    price_270d = prices[len(prices)//4][1] if len(prices) >= 270 else None  # ~9 months ago
+                    
+                    # Calculate percentage changes
+                    percent_change_365d = ((current_price - price_365d) / price_365d) * 100 if price_365d > 0 else None
+                    percent_change_180d = ((current_price - price_180d) / price_180d) * 100 if price_180d and price_180d > 0 else None
+                    percent_change_270d = ((current_price - price_270d) / price_270d) * 100 if price_270d and price_270d > 0 else None
                     
                     return {
-                        'percent_change_180d': market_data.get('price_change_percentage_200d', {}).get('usd'),
-                        'percent_change_365d': market_data.get('price_change_percentage_1y', {}).get('usd'),
-                        'source': 'coingecko'
+                        'percent_change_180d': percent_change_180d,
+                        'percent_change_270d': percent_change_270d, 
+                        'percent_change_365d': percent_change_365d,
+                        'source': 'coingecko_historical',
+                        'data_quality': 'real_historical_data'
                     }
                     
         except Exception as e:
-            logger.warning(f"CoinGecko API error for {symbol}: {e}")
+            logger.warning(f"CoinGecko historical data error for {symbol}: {e}")
             return None
         
         return None
