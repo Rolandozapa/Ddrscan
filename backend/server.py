@@ -561,8 +561,8 @@ def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
             'momentum': 0.15
         }
 
-def get_percent_change_for_period(crypto_data: dict, period: TimePeriod) -> Optional[float]:
-    """Get percentage change for specified period with intelligent calculation fallback"""
+def get_percent_change_for_period(crypto_data: dict, period: TimePeriod) -> tuple[Optional[float], str]:
+    """Get percentage change for specified period with source information"""
     # Direct mapping for available fields
     period_map = {
         TimePeriod.TWENTY_FOUR_HOURS: 'percent_change_24h',
@@ -576,17 +576,24 @@ def get_percent_change_for_period(crypto_data: dict, period: TimePeriod) -> Opti
     
     field = period_map.get(period)
     if field and crypto_data.get(field) is not None:
-        return crypto_data.get(field)
+        # Check if this data came from CoinGecko
+        data_sources = crypto_data.get('data_sources', ['coinmarketcap'])
+        if 'coingecko_historical' in data_sources and period in [TimePeriod.SIX_MONTHS, TimePeriod.NINE_MONTHS, TimePeriod.ONE_YEAR]:
+            return crypto_data.get(field), "coingecko"
+        return crypto_data.get(field), "direct"
     
     # Fallback calculations for missing long-term data
     if period == TimePeriod.SIX_MONTHS:
-        return calculate_six_month_change(crypto_data)
+        value = calculate_six_month_change(crypto_data)
+        return value, "calculated" if value is not None else "unavailable"
     elif period == TimePeriod.NINE_MONTHS:
-        return calculate_nine_month_change(crypto_data)
+        value = calculate_nine_month_change(crypto_data)
+        return value, "calculated" if value is not None else "unavailable"
     elif period == TimePeriod.ONE_YEAR:
-        return calculate_one_year_change(crypto_data)
+        value = calculate_one_year_change(crypto_data)
+        return value, "calculated" if value is not None else "unavailable"
     
-    return None
+    return None, "unavailable"
 
 def calculate_six_month_change(crypto_data: dict) -> Optional[float]:
     """Calculate 6-month change using available data"""
