@@ -202,9 +202,7 @@ const CryptoRankingApp = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className="text-sm font-mono">
-                          {crypto.performance_score.toFixed(1)}
-                        </span>
+                        {formatPerformance(crypto.period_performance)}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className="text-sm font-mono">
