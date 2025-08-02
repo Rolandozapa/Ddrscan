@@ -439,41 +439,63 @@ async def calculate_all_scores():
             await db.crypto_scores.insert_many([score.dict() for score in scores])
 
 def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[CryptoScore]:
-    """Calculate comprehensive score for a crypto"""
+    """Calculate comprehensive score for a crypto with enhanced algorithms"""
     try:
         # Get the appropriate percentage change based on period
         percent_change = get_percent_change_for_period(crypto_data, period)
         if percent_change is None:
+            logger.warning(f"No data available for {crypto_data.get('symbol', 'unknown')} - {period.value}")
             return None
             
-        # Calculate individual scores
+        # Calculate individual scores with enhanced algorithms
         performance_score = scoring_service.calculate_performance_score(percent_change)
         
-        # Use volume as volatility proxy
-        volatility_proxy = min(2.0, crypto_data.get('volume_24h', 0) / max(crypto_data.get('market_cap', 1), 1))
-        drawdown_score = scoring_service.calculate_drawdown_score(percent_change, volatility_proxy)
+        # Use volume as volatility proxy with market cap normalization
+        volume_24h = crypto_data.get('volume_24h', 0)
+        market_cap = crypto_data.get('market_cap', 1)
+        volatility_proxy = min(3.0, volume_24h / max(market_cap, 1_000_000))
+        
+        drawdown_score = scoring_service.calculate_drawdown_score(
+            percent_change, volatility_proxy, period
+        )
         
         rebound_potential_score = scoring_service.calculate_rebound_potential_score(
-            percent_change, crypto_data.get('market_cap', 0)
+            percent_change, market_cap, period
         )
         
-        # Use 24h vs longer term for momentum
+        # Enhanced momentum calculation using multiple timeframes
         short_change = crypto_data.get('percent_change_24h')
-        momentum_score = scoring_service.calculate_momentum_score(short_change, percent_change)
+        long_change = percent_change
         
-        # Weighted total score
+        # For better momentum analysis, use different reference periods
+        if period == TimePeriod.TWENTY_FOUR_HOURS:
+            reference_change = crypto_data.get('percent_change_7d')
+        elif period == TimePeriod.ONE_WEEK:
+            reference_change = crypto_data.get('percent_change_30d')
+        else:
+            reference_change = crypto_data.get('percent_change_7d')
+        
+        if reference_change is not None:
+            momentum_score = scoring_service.calculate_momentum_score(short_change, reference_change, period)
+        else:
+            momentum_score = scoring_service.calculate_momentum_score(short_change, long_change, period)
+        
+        # Enhanced weighted total score with period-specific adjustments
+        period_weights = get_period_specific_weights(period)
         total_score = (
-            performance_score * 0.25 +
-            drawdown_score * 0.20 +
-            rebound_potential_score * 0.35 +
-            momentum_score * 0.20
+            performance_score * period_weights['performance'] +
+            drawdown_score * period_weights['drawdown'] +
+            rebound_potential_score * period_weights['rebound'] +
+            momentum_score * period_weights['momentum']
         )
+        
+        logger.debug(f"{crypto_data['symbol']} - {period.value}: P:{performance_score:.1f}, D:{drawdown_score:.1f}, R:{rebound_potential_score:.1f}, M:{momentum_score:.1f}, Total:{total_score:.1f}")
         
         return CryptoScore(
             crypto_id=crypto_data['id'],
             symbol=crypto_data['symbol'],
             name=crypto_data['name'],
-            market_cap=crypto_data['market_cap'],
+            market_cap=market_cap,
             price=crypto_data['price'],
             period=period,
             performance_score=performance_score,
@@ -485,6 +507,33 @@ def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[Cr
     except Exception as e:
         logger.error(f"Error calculating score for {crypto_data.get('symbol', 'unknown')}: {e}")
         return None
+
+def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
+    """Get period-specific weights for scoring components"""
+    if period in [TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK]:
+        # Short-term: Focus more on momentum and rebound potential
+        return {
+            'performance': 0.20,
+            'drawdown': 0.15,
+            'rebound': 0.40,
+            'momentum': 0.25
+        }
+    elif period in [TimePeriod.ONE_MONTH, TimePeriod.THREE_MONTHS]:
+        # Medium-term: Balanced approach
+        return {
+            'performance': 0.25,
+            'drawdown': 0.20,
+            'rebound': 0.35,
+            'momentum': 0.20
+        }
+    else:
+        # Long-term: Focus more on performance and drawdown resistance
+        return {
+            'performance': 0.30,
+            'drawdown': 0.25,
+            'rebound': 0.30,
+            'momentum': 0.15
+        }
 
 def get_percent_change_for_period(crypto_data: dict, period: TimePeriod) -> Optional[float]:
     """Get percentage change for specified period with intelligent calculation fallback"""
