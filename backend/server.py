@@ -89,6 +89,8 @@ class CryptoAPIService:
             'X-CMC_PRO_API_KEY': CMC_API_KEY,
             'Accept': 'application/json',
         }
+        self.coingecko_base_url = "https://api.coingecko.com/api/v3"
+        self.session_timeout = aiohttp.ClientTimeout(total=30)
     
     async def fetch_top_cryptos(self, limit: int = 1000) -> List[Dict[str, Any]]:
         """Fetch top crypto data from CoinMarketCap API"""
@@ -101,11 +103,15 @@ class CryptoAPIService:
                 'sort': 'market_cap'
             }
             
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=self.session_timeout) as session:
                 async with session.get(url, headers=self.cmc_headers, params=params) as response:
                     if response.status == 200:
                         data = await response.json()
-                        return data.get('data', [])
+                        cryptos = data.get('data', [])
+                        
+                        # Enhance with CoinGecko data for better historical accuracy
+                        enhanced_cryptos = await self.enhance_with_coingecko_data(session, cryptos)
+                        return enhanced_cryptos
                     else:
                         logger.error(f"CoinMarketCap API error: {response.status}")
                         return []
@@ -113,9 +119,102 @@ class CryptoAPIService:
             logger.error(f"Error fetching crypto data: {e}")
             return []
 
+    async def enhance_with_coingecko_data(self, session: aiohttp.ClientSession, cryptos: List[Dict]) -> List[Dict]:
+        """Enhance CMC data with CoinGecko historical data for missing periods"""
+        enhanced_cryptos = []
+        
+        # Get top cryptos first, then enhance selectively to avoid rate limits
+        priority_cryptos = cryptos[:100]  # Focus on top 100 for CoinGecko enhancement
+        
+        for i, crypto in enumerate(cryptos):
+            enhanced_crypto = crypto.copy()
+            
+            # Only enhance priority cryptos with CoinGecko data
+            if i < len(priority_cryptos):
+                try:
+                    coingecko_data = await self.fetch_coingecko_historical(session, crypto.get('symbol', '').lower())
+                    if coingecko_data:
+                        # Add missing historical data
+                        quote = enhanced_crypto.get('quote', {}).get('USD', {})
+                        
+                        # Fill in missing longer-term data from CoinGecko
+                        if not quote.get('percent_change_180d'):
+                            quote['percent_change_180d'] = coingecko_data.get('percent_change_180d')
+                        if not quote.get('percent_change_365d'):
+                            quote['percent_change_365d'] = coingecko_data.get('percent_change_365d')
+                        
+                        logger.info(f"Enhanced {crypto.get('symbol')} with CoinGecko historical data")
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to enhance {crypto.get('symbol')} with CoinGecko: {e}")
+                    
+                # Add small delay to respect rate limits
+                if i % 10 == 0 and i > 0:
+                    await asyncio.sleep(1)
+            
+            enhanced_cryptos.append(enhanced_crypto)
+        
+        return enhanced_cryptos
+
+    async def fetch_coingecko_historical(self, session: aiohttp.ClientSession, symbol: str) -> Optional[Dict]:
+        """Fetch historical data from CoinGecko for missing periods"""
+        try:
+            # First, get the coin ID from CoinGecko
+            search_url = f"{self.coingecko_base_url}/search"
+            params = {'query': symbol}
+            
+            async with session.get(search_url, params=params) as search_response:
+                if search_response.status != 200:
+                    return None
+                
+                search_data = await search_response.json()
+                coins = search_data.get('coins', [])
+                
+                # Find exact symbol match
+                coin_id = None
+                for coin in coins:
+                    if coin.get('symbol', '').lower() == symbol.lower():
+                        coin_id = coin.get('id')
+                        break
+                
+                if not coin_id:
+                    return None
+                
+                # Get historical price data
+                history_url = f"{self.coingecko_base_url}/coins/{coin_id}"
+                history_params = {
+                    'localization': 'false',
+                    'tickers': 'false',
+                    'market_data': 'true',
+                    'community_data': 'false',
+                    'developer_data': 'false'
+                }
+                
+                async with session.get(history_url, params=history_params) as history_response:
+                    if history_response.status != 200:
+                        return None
+                    
+                    history_data = await history_response.json()
+                    market_data = history_data.get('market_data', {})
+                    
+                    # Extract percentage changes
+                    price_changes = market_data.get('price_change_percentage_24h_in_currency', {})
+                    
+                    return {
+                        'percent_change_180d': market_data.get('price_change_percentage_200d', {}).get('usd'),
+                        'percent_change_365d': market_data.get('price_change_percentage_1y', {}).get('usd'),
+                        'source': 'coingecko'
+                    }
+                    
+        except Exception as e:
+            logger.warning(f"CoinGecko API error for {symbol}: {e}")
+            return None
+        
+        return None
+
     async def fetch_historical_data(self, symbol: str, time_period: TimePeriod) -> Dict[str, Any]:
         """Fetch historical data for calculating drawdown and momentum"""
-        # For now, we'll use the percentage changes from CMC
+        # For now, we'll use the percentage changes from CMC/CoinGecko
         # In a full implementation, we'd fetch OHLC data
         return {}
 
