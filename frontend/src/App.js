@@ -7,7 +7,7 @@ const API = `${BACKEND_URL}/api`;
 
 const CryptoRankingApp = () => {
   const [rankings, setRankings] = useState([]);
-  const [period, setPeriod] = useState("365d");
+  const [period, setPeriod] = useState("24h");
   const [periods, setPeriods] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
