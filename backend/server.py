@@ -69,6 +69,7 @@ class CryptoScore(BaseModel):
     market_cap: float
     price: float
     period: TimePeriod
+    period_performance: Optional[float] = None  # Actual % change for the period
     performance_score: float
     drawdown_score: float
     rebound_potential_score: float
