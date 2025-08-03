@@ -701,13 +701,21 @@ def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
             'rebound': 0.40,
             'momentum': 0.25
         }
-    else:  # TWO_MONTHS, THREE_MONTHS
-        # Medium to long-term: Focus more on performance and drawdown resistance
+    elif period in [TimePeriod.TWO_MONTHS, TimePeriod.THREE_MONTHS]:
+        # Medium-term: Balanced approach
         return {
             'performance': 0.25,
+            'drawdown': 0.20,
+            'rebound': 0.35,
+            'momentum': 0.20
+        }
+    else:  # SIX_MONTHS, NINE_MONTHS, ONE_YEAR
+        # Long-term: Focus more on performance and drawdown resistance
+        return {
+            'performance': 0.30,
             'drawdown': 0.25,
             'rebound': 0.30,
-            'momentum': 0.20
+            'momentum': 0.15
         }
 
 # Simplified approach - using only direct CoinMarketCap percentage data
