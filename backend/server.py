@@ -550,7 +550,7 @@ async def get_available_periods():
 
 @api_router.get("/crypto/{symbol}/historical/{period}")
 async def get_historical_price_info(symbol: str, period: TimePeriod):
-    """Get historical price information for debugging and validation"""
+    """Get performance information for debugging and validation - simplified approach"""
     try:
         # Get current crypto data
         crypto = await db.crypto_data.find_one({"symbol": symbol.upper()})
@@ -566,17 +566,14 @@ async def get_historical_price_info(symbol: str, period: TimePeriod):
             performance = result
             data_source = "unknown"
             
-        if performance is not None and current_price > 0:
-            historical_price = calculate_historical_price_from_performance(current_price, performance)
-            
+        if performance is not None:
             return {
                 "symbol": symbol.upper(),
                 "period": period.value,
                 "current_price": current_price,
                 "performance_percent": performance,
-                "calculated_historical_price": historical_price,
                 "data_source": data_source,
-                "validation_note": f"If the price was ${historical_price:.6f} {period.value} ago, the performance would be {performance:.2f}%"
+                "note": f"Using direct CoinMarketCap percentage data: {performance:.2f}% change over {period.value}"
             }
         else:
             return {
