@@ -88,12 +88,10 @@ const CryptoRankingApp = () => {
         return '✅';
       case 'coingecko_historical':
         return '🌐';
-      case 'calculated_from_90d':
-        return '🧮90d';
-      case 'calculated_from_30d':
-        return '🧮30d';
-      case 'calculated_from_7d':
-        return '🧮7d';
+      case 'yahoo_historical':
+        return '📊';
+      case 'calculated_from_cmc':
+        return '🧮';
       default:
         return '❓';
     }
