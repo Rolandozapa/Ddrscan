@@ -368,7 +368,7 @@ class CryptoScoringService:
         momentum_diff = short_change - long_change
         
         # Period-specific momentum interpretation
-        if period in [TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK]:
+        if period in [TimePeriod.ONE_HOUR, TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK]:
             # For short periods, compare with 30d trend
             reference_period = "medium_term"
         else:
