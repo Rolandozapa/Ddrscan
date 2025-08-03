@@ -333,9 +333,11 @@ class CryptoScoringService:
         
         # Period-specific rebound assessment
         period_factor = {
+            TimePeriod.ONE_HOUR: 0.7,           # Very short-term noise
             TimePeriod.TWENTY_FOUR_HOURS: 0.8,  # Short-term noise
             TimePeriod.ONE_WEEK: 0.9,
             TimePeriod.ONE_MONTH: 1.0,
+            TimePeriod.TWO_MONTHS: 1.1,
             TimePeriod.THREE_MONTHS: 1.2,       # Good indicator of trend reversal
             TimePeriod.SIX_MONTHS: 1.1,
             TimePeriod.NINE_MONTHS: 1.0,
