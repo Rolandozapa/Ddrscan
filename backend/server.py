@@ -176,68 +176,88 @@ class CryptoAPIService:
         return enhanced_cryptos
 
     async def fetch_coingecko_historical_data(self, session: aiohttp.ClientSession, symbol: str) -> Optional[Dict]:
-        """Fetch real historical data from CoinGecko"""
+        """Fetch real historical data from CoinGecko with 1 price per day"""
         try:
-            # First, search for the coin ID
-            search_url = f"{self.coingecko_base_url}/search"
-            params = {'query': symbol}
+            # Direct mapping for major cryptos to avoid search API calls
+            symbol_to_id = {
+                'BTC': 'bitcoin',
+                'ETH': 'ethereum', 
+                'BNB': 'binancecoin',
+                'XRP': 'ripple',
+                'ADA': 'cardano',
+                'SOL': 'solana',
+                'DOT': 'polkadot',
+                'DOGE': 'dogecoin',
+                'AVAX': 'avalanche-2',
+                'MATIC': 'matic-network',
+                'LINK': 'chainlink',
+                'UNI': 'uniswap'
+            }
             
-            async with session.get(search_url, params=params) as search_response:
-                if search_response.status != 200:
-                    return None
+            coin_id = symbol_to_id.get(symbol)
+            
+            # If not in direct mapping, search for it
+            if not coin_id:
+                search_url = f"{self.coingecko_base_url}/search"
+                params = {'query': symbol}
                 
-                search_data = await search_response.json()
-                coins = search_data.get('coins', [])
-                
-                # Find exact symbol match
-                coin_id = None
-                for coin in coins:
-                    if coin.get('symbol', '').upper() == symbol:
-                        coin_id = coin.get('id')
-                        break
-                
-                if not coin_id:
-                    return None
-                
-                # Get market chart data for the past year
-                chart_url = f"{self.coingecko_base_url}/coins/{coin_id}/market_chart"
-                chart_params = {
-                    'vs_currency': 'usd',
-                    'days': '365',
-                    'interval': 'daily'
-                }
-                
-                async with session.get(chart_url, params=chart_params) as chart_response:
-                    if chart_response.status != 200:
+                async with session.get(search_url, params=params) as search_response:
+                    if search_response.status != 200:
                         return None
                     
-                    chart_data = await chart_response.json()
-                    prices = chart_data.get('prices', [])
+                    search_data = await search_response.json()
+                    coins = search_data.get('coins', [])
                     
-                    if len(prices) < 180:  # Need at least 6 months of data
+                    # Find exact symbol match
+                    for coin in coins:
+                        if coin.get('symbol', '').upper() == symbol:
+                            coin_id = coin.get('id')
+                            break
+                    
+                    if not coin_id:
                         return None
-                    
-                    # Calculate percentage changes from price data
-                    current_price = prices[-1][1]  # Latest price
-                    
-                    # Calculate historical prices for different periods
-                    price_180d = prices[-180][1] if len(prices) >= 180 else None  # 6 months ago
-                    price_270d = prices[-270][1] if len(prices) >= 270 else None  # 9 months ago  
-                    price_365d = prices[-365][1] if len(prices) >= 365 else prices[0][1]  # 1 year ago
-                    
-                    # Calculate percentage changes
-                    result = {}
-                    if price_180d and price_180d > 0:
-                        result['percent_change_180d'] = ((current_price - price_180d) / price_180d) * 100
-                    if price_270d and price_270d > 0:
-                        result['percent_change_270d'] = ((current_price - price_270d) / price_270d) * 100
-                    if price_365d and price_365d > 0:
-                        result['percent_change_365d'] = ((current_price - price_365d) / price_365d) * 100
-                    
-                    if result:
-                        logger.info(f"✅ CoinGecko: Enhanced {symbol} with historical data")
-                        return result
-                    
+            
+            # Get market chart data for the past year with daily interval (1 price/day)
+            chart_url = f"{self.coingecko_base_url}/coins/{coin_id}/market_chart"
+            chart_params = {
+                'vs_currency': 'usd',
+                'days': '365',
+                'interval': 'daily'  # This ensures 1 price per day
+            }
+            
+            async with session.get(chart_url, params=chart_params) as chart_response:
+                if chart_response.status != 200:
+                    logger.warning(f"CoinGecko chart API failed for {symbol}: {chart_response.status}")
+                    return None
+                
+                chart_data = await chart_response.json()
+                prices = chart_data.get('prices', [])
+                
+                if len(prices) < 180:  # Need at least 6 months of data
+                    logger.warning(f"Insufficient data for {symbol}: {len(prices)} days")
+                    return None
+                
+                # Calculate percentage changes from daily price data
+                current_price = prices[-1][1]  # Latest price
+                
+                # Calculate historical prices for different periods
+                price_180d = prices[-180][1] if len(prices) >= 180 else None  # 6 months ago
+                price_270d = prices[-270][1] if len(prices) >= 270 else None  # 9 months ago  
+                price_365d = prices[-365][1] if len(prices) >= 365 else prices[0][1]  # 1 year ago
+                
+                # Calculate percentage changes
+                result = {}
+                if price_180d and price_180d > 0:
+                    result['percent_change_180d'] = ((current_price - price_180d) / price_180d) * 100
+                if price_270d and price_270d > 0:
+                    result['percent_change_270d'] = ((current_price - price_270d) / price_270d) * 100
+                if price_365d and price_365d > 0:
+                    result['percent_change_365d'] = ((current_price - price_365d) / price_365d) * 100
+                
+                if result:
+                    logger.info(f"✅ CoinGecko: {symbol} enhanced with {len(prices)} days of data")
+                    return result
+                
         except Exception as e:
             logger.warning(f"CoinGecko error for {symbol}: {e}")
         
