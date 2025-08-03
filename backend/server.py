@@ -800,9 +800,11 @@ async def get_historical_price_info(symbol: str, period: TimePeriod):
 def get_period_label(period: TimePeriod) -> str:
     """Get human-readable label for time period"""
     labels = {
+        TimePeriod.ONE_HOUR: "1 heure",
         TimePeriod.TWENTY_FOUR_HOURS: "24 heures",
         TimePeriod.ONE_WEEK: "1 semaine",
         TimePeriod.ONE_MONTH: "1 mois",
+        TimePeriod.TWO_MONTHS: "2 mois",
         TimePeriod.THREE_MONTHS: "3 mois",
         TimePeriod.SIX_MONTHS: "6 mois",
         TimePeriod.NINE_MONTHS: "9 mois",
