@@ -511,7 +511,9 @@ def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[Cr
         long_change = percent_change
         
         # For better momentum analysis, use different reference periods
-        if period == TimePeriod.TWENTY_FOUR_HOURS:
+        if period == TimePeriod.ONE_HOUR:
+            reference_change = crypto_data.get('percent_change_24h')
+        elif period == TimePeriod.TWENTY_FOUR_HOURS:
             reference_change = crypto_data.get('percent_change_7d')
         elif period == TimePeriod.ONE_WEEK:
             reference_change = crypto_data.get('percent_change_30d')
