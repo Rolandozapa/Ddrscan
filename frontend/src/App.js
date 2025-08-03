@@ -219,7 +219,12 @@ const CryptoRankingApp = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {formatPerformance(crypto.period_performance)}
+                        <div className="flex flex-col items-center">
+                          {formatPerformance(crypto.period_performance)}
+                          <div className="text-xs text-gray-400 mt-1" title={`Source: ${crypto.data_source}`}>
+                            {getDataSourceIcon(crypto.data_source)}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className="text-sm font-mono">
