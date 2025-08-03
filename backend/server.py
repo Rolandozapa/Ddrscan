@@ -208,10 +208,7 @@ class CryptoScoringService:
             TimePeriod.ONE_WEEK: 0.9,
             TimePeriod.ONE_MONTH: 1.0,
             TimePeriod.TWO_MONTHS: 1.1,
-            TimePeriod.THREE_MONTHS: 1.2,       # Good indicator of trend reversal
-            TimePeriod.SIX_MONTHS: 1.1,
-            TimePeriod.NINE_MONTHS: 1.0,
-            TimePeriod.ONE_YEAR: 0.9            # Long-term trends harder to reverse
+            TimePeriod.THREE_MONTHS: 1.2        # Good indicator of trend reversal
         }.get(period, 1.0)
         
         # Calculate rebound score based on current position
