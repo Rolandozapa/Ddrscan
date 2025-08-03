@@ -596,9 +596,11 @@ def get_percent_change_for_period(crypto_data: dict, period: TimePeriod):
     """Get percentage change for specified period using available data and calculations"""
     # Direct mapping for available fields from CoinMarketCap
     period_map = {
+        TimePeriod.ONE_HOUR: 'percent_change_1h',
         TimePeriod.TWENTY_FOUR_HOURS: 'percent_change_24h',
         TimePeriod.ONE_WEEK: 'percent_change_7d',
         TimePeriod.ONE_MONTH: 'percent_change_30d',
+        TimePeriod.TWO_MONTHS: 'percent_change_60d',
         TimePeriod.THREE_MONTHS: 'percent_change_90d',
         TimePeriod.SIX_MONTHS: 'percent_change_180d',  # Rarely available from CMC
         TimePeriod.NINE_MONTHS: 'percent_change_270d', # Not available from CMC
