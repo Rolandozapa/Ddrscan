@@ -98,10 +98,11 @@ class CryptoAPIService:
             'Accept': 'application/json',
         }
         self.coingecko_base_url = "https://api.coingecko.com/api/v3"
+        self.yahoo_base_url = "https://query1.finance.yahoo.com/v8/finance/chart"
         self.session_timeout = aiohttp.ClientTimeout(total=30)
     
     async def fetch_top_cryptos(self, limit: int = 1000) -> List[Dict[str, Any]]:
-        """Fetch top crypto data from CoinMarketCap API - using only direct data"""
+        """Fetch top crypto data from CoinMarketCap API and enhance with historical data"""
         try:
             url = f"{CMC_BASE_URL}/v1/cryptocurrency/listings/latest"
             params = {
@@ -115,7 +116,11 @@ class CryptoAPIService:
                 async with session.get(url, headers=self.cmc_headers, params=params) as response:
                     if response.status == 200:
                         data = await response.json()
-                        return data.get('data', [])  # Return direct CoinMarketCap data only
+                        cryptos = data.get('data', [])
+                        
+                        # Enhance top 100 cryptos with historical data
+                        enhanced_cryptos = await self.enhance_with_historical_data(session, cryptos)
+                        return enhanced_cryptos
                     else:
                         logger.error(f"CoinMarketCap API error: {response.status}")
                         return []
@@ -123,7 +128,230 @@ class CryptoAPIService:
             logger.error(f"Error fetching crypto data: {e}")
             return []
 
-    # Removed CoinGecko enhancement functions - using only direct CoinMarketCap data
+    async def enhance_with_historical_data(self, session: aiohttp.ClientSession, cryptos: List[Dict]) -> List[Dict]:
+        """Enhance crypto data with historical data from CoinGecko and Yahoo Finance"""
+        enhanced_cryptos = []
+        
+        # Focus on top 50 cryptos for historical data enhancement to avoid rate limits
+        priority_cryptos = cryptos[:50]
+        
+        for i, crypto in enumerate(cryptos):
+            enhanced_crypto = crypto.copy()
+            
+            # Only enhance priority cryptos with historical data
+            if i < len(priority_cryptos):
+                symbol = crypto.get('symbol', '').upper()
+                
+                try:
+                    # Try CoinGecko first (most reliable for crypto)
+                    coingecko_data = await self.fetch_coingecko_historical_data(session, symbol)
+                    if coingecko_data:
+                        self.apply_historical_data(enhanced_crypto, coingecko_data, "coingecko")
+                    else:
+                        # Fallback to Yahoo Finance
+                        yahoo_data = await self.fetch_yahoo_historical_data(session, symbol)
+                        if yahoo_data:
+                            self.apply_historical_data(enhanced_crypto, yahoo_data, "yahoo")
+                        else:
+                            # Last resort: calculate from available CMC data
+                            calculated_data = self.calculate_long_term_data(crypto)
+                            if calculated_data:
+                                self.apply_historical_data(enhanced_crypto, calculated_data, "calculated")
+                    
+                    # Add delay every 10 requests to respect rate limits
+                    if i % 10 == 0 and i > 0:
+                        await asyncio.sleep(2)
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to enhance {symbol} with historical data: {e}")
+            
+            enhanced_cryptos.append(enhanced_crypto)
+        
+        return enhanced_cryptos
+
+    async def fetch_coingecko_historical_data(self, session: aiohttp.ClientSession, symbol: str) -> Optional[Dict]:
+        """Fetch real historical data from CoinGecko"""
+        try:
+            # First, search for the coin ID
+            search_url = f"{self.coingecko_base_url}/search"
+            params = {'query': symbol}
+            
+            async with session.get(search_url, params=params) as search_response:
+                if search_response.status != 200:
+                    return None
+                
+                search_data = await search_response.json()
+                coins = search_data.get('coins', [])
+                
+                # Find exact symbol match
+                coin_id = None
+                for coin in coins:
+                    if coin.get('symbol', '').upper() == symbol:
+                        coin_id = coin.get('id')
+                        break
+                
+                if not coin_id:
+                    return None
+                
+                # Get market chart data for the past year
+                chart_url = f"{self.coingecko_base_url}/coins/{coin_id}/market_chart"
+                chart_params = {
+                    'vs_currency': 'usd',
+                    'days': '365',
+                    'interval': 'daily'
+                }
+                
+                async with session.get(chart_url, params=chart_params) as chart_response:
+                    if chart_response.status != 200:
+                        return None
+                    
+                    chart_data = await chart_response.json()
+                    prices = chart_data.get('prices', [])
+                    
+                    if len(prices) < 180:  # Need at least 6 months of data
+                        return None
+                    
+                    # Calculate percentage changes from price data
+                    current_price = prices[-1][1]  # Latest price
+                    
+                    # Calculate historical prices for different periods
+                    price_180d = prices[-180][1] if len(prices) >= 180 else None  # 6 months ago
+                    price_270d = prices[-270][1] if len(prices) >= 270 else None  # 9 months ago  
+                    price_365d = prices[-365][1] if len(prices) >= 365 else prices[0][1]  # 1 year ago
+                    
+                    # Calculate percentage changes
+                    result = {}
+                    if price_180d and price_180d > 0:
+                        result['percent_change_180d'] = ((current_price - price_180d) / price_180d) * 100
+                    if price_270d and price_270d > 0:
+                        result['percent_change_270d'] = ((current_price - price_270d) / price_270d) * 100
+                    if price_365d and price_365d > 0:
+                        result['percent_change_365d'] = ((current_price - price_365d) / price_365d) * 100
+                    
+                    if result:
+                        logger.info(f"✅ CoinGecko: Enhanced {symbol} with historical data")
+                        return result
+                    
+        except Exception as e:
+            logger.warning(f"CoinGecko error for {symbol}: {e}")
+        
+        return None
+
+    async def fetch_yahoo_historical_data(self, session: aiohttp.ClientSession, symbol: str) -> Optional[Dict]:
+        """Fetch historical data from Yahoo Finance as fallback"""
+        try:
+            # Yahoo Finance uses different symbol format for crypto
+            yahoo_symbol = f"{symbol}-USD"
+            
+            # Get 1 year of data
+            url = f"{self.yahoo_base_url}/{yahoo_symbol}"
+            params = {
+                'period1': int((datetime.utcnow() - timedelta(days=365)).timestamp()),
+                'period2': int(datetime.utcnow().timestamp()),
+                'interval': '1d'
+            }
+            
+            async with session.get(url, params=params) as response:
+                if response.status != 200:
+                    return None
+                
+                data = await response.json()
+                chart = data.get('chart', {})
+                results = chart.get('result', [])
+                
+                if not results:
+                    return None
+                
+                result_data = results[0]
+                timestamps = result_data.get('timestamp', [])
+                indicators = result_data.get('indicators', {})
+                quotes = indicators.get('quote', [{}])[0]
+                closes = quotes.get('close', [])
+                
+                if not closes or len(closes) < 180:
+                    return None
+                
+                # Calculate percentage changes
+                current_price = closes[-1]
+                result = {}
+                
+                if len(closes) >= 180:
+                    price_180d = closes[-180]
+                    if price_180d and price_180d > 0:
+                        result['percent_change_180d'] = ((current_price - price_180d) / price_180d) * 100
+                
+                if len(closes) >= 270:
+                    price_270d = closes[-270]
+                    if price_270d and price_270d > 0:
+                        result['percent_change_270d'] = ((current_price - price_270d) / price_270d) * 100
+                
+                if len(closes) >= 365:
+                    price_365d = closes[-365]
+                    if price_365d and price_365d > 0:
+                        result['percent_change_365d'] = ((current_price - price_365d) / price_365d) * 100
+                
+                if result:
+                    logger.info(f"✅ Yahoo Finance: Enhanced {symbol} with historical data")
+                    return result
+                
+        except Exception as e:
+            logger.warning(f"Yahoo Finance error for {symbol}: {e}")
+        
+        return None
+
+    def calculate_long_term_data(self, crypto_data: Dict) -> Optional[Dict]:
+        """Calculate long-term data from available shorter periods as last resort"""
+        try:
+            quote = crypto_data.get('quote', {}).get('USD', {})
+            change_90d = quote.get('percent_change_90d')
+            change_30d = quote.get('percent_change_30d')
+            
+            if not change_90d and not change_30d:
+                return None
+            
+            result = {}
+            market_cap = quote.get('market_cap', 0)
+            
+            # Calculate with conservative multipliers
+            if change_90d is not None:
+                # 6 months = 2 × 90 days (conservative)
+                result['percent_change_180d'] = change_90d * 1.8
+                # 9 months = 3 × 90 days (very conservative)
+                result['percent_change_270d'] = change_90d * 2.5
+                # 1 year = 4 × 90 days (with market cycle adjustment)
+                multiplier = 3.0 if change_90d > 0 else 2.5
+                result['percent_change_365d'] = change_90d * multiplier
+            
+            elif change_30d is not None:
+                # More conservative estimates from monthly data
+                cap_factor = 1.0 if market_cap > 1_000_000_000 else 1.2
+                result['percent_change_180d'] = change_30d * 5.0 * cap_factor
+                result['percent_change_270d'] = change_30d * 7.0 * cap_factor
+                result['percent_change_365d'] = change_30d * 9.0 * cap_factor
+            
+            # Apply reasonable bounds
+            for key in result:
+                result[key] = max(-95, min(2000, result[key]))
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error calculating long-term data: {e}")
+            return None
+
+    def apply_historical_data(self, crypto: Dict, historical_data: Dict, source: str):
+        """Apply historical data to crypto object"""
+        quote = crypto.get('quote', {}).get('USD', {})
+        
+        for period in ['percent_change_180d', 'percent_change_270d', 'percent_change_365d']:
+            if period in historical_data and historical_data[period] is not None:
+                quote[period] = historical_data[period]
+        
+        # Track data sources
+        data_sources = crypto.get('data_sources', ['coinmarketcap'])
+        if source not in data_sources:
+            data_sources.append(source)
+        crypto['data_sources'] = data_sources
 
     async def fetch_historical_data(self, symbol: str, time_period: TimePeriod) -> Dict[str, Any]:
         """Fetch historical data for calculating drawdown and momentum"""
