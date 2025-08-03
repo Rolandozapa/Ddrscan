@@ -539,6 +539,10 @@ async def update_crypto_data():
                 percent_change_30d=quote.get('percent_change_30d'),
                 percent_change_60d=quote.get('percent_change_60d'),
                 percent_change_90d=quote.get('percent_change_90d'),
+                percent_change_180d=quote.get('percent_change_180d'),  # From external APIs
+                percent_change_270d=quote.get('percent_change_270d'),  # From external APIs
+                percent_change_365d=quote.get('percent_change_365d'),  # From external APIs
+                data_sources=crypto.get('data_sources', ['coinmarketcap']),
                 max_supply=crypto.get('max_supply'),
                 circulating_supply=crypto.get('circulating_supply', 0),
                 total_supply=crypto.get('total_supply'),
