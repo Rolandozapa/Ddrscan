@@ -329,7 +329,17 @@ async def calculate_all_scores():
     """Calculate scores for all time periods"""
     cryptos = await db.crypto_data.find().to_list(None)
     
-    for period in TimePeriod:
+    # Only calculate for periods we actually support
+    supported_periods = [
+        TimePeriod.ONE_HOUR,
+        TimePeriod.TWENTY_FOUR_HOURS, 
+        TimePeriod.ONE_WEEK,
+        TimePeriod.ONE_MONTH,
+        TimePeriod.TWO_MONTHS,
+        TimePeriod.THREE_MONTHS
+    ]
+    
+    for period in supported_periods:
         scores = []
         for crypto in cryptos:
             score = calculate_crypto_score(crypto, period)
@@ -349,6 +359,7 @@ async def calculate_all_scores():
         # Insert new scores
         if scores:
             await db.crypto_scores.insert_many([score.dict() for score in scores])
+            logger.info(f"✅ Calculated {len(scores)} scores for {period.value}")
 
 def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[CryptoScore]:
     """Calculate comprehensive score for a crypto with enhanced algorithms"""
