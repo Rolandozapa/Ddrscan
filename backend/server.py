@@ -703,7 +703,83 @@ def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
             'momentum': 0.25          # Important: early recovery signs
         }
 
-# Simplified approach - using only direct CoinMarketCap percentage data
+def calculate_recovery_potential_75(crypto_data: dict, current_price: float) -> tuple[Optional[float], Optional[float]]:
+    """Calculate recovery potential to reach 75% of estimated yearly high"""
+    try:
+        # Method 1: Use historical data if available from CoinGecko enhancement
+        if 'historical_data' in crypto_data and crypto_data['historical_data'].get('yearly_high'):
+            yearly_high = crypto_data['historical_data']['yearly_high']
+        else:
+            # Method 2: Estimate yearly high from available percentage changes
+            yearly_high = estimate_yearly_high_from_performance(crypto_data, current_price)
+        
+        if not yearly_high or yearly_high <= 0:
+            return None, None
+        
+        # Calculate target price (75% of yearly high)
+        target_price_75 = yearly_high * 0.75
+        
+        # Calculate potential gain to reach 75% of yearly high
+        if current_price > 0:
+            recovery_potential = ((target_price_75 - current_price) / current_price) * 100
+            # Cap at reasonable values (max 10,000% potential)
+            recovery_potential = min(10000, max(-50, recovery_potential))
+            return recovery_potential, yearly_high
+        
+    except Exception as e:
+        logger.error(f"Error calculating recovery potential: {e}")
+    
+    return None, None
+
+def estimate_yearly_high_from_performance(crypto_data: dict, current_price: float) -> Optional[float]:
+    """Estimate yearly high price from available performance data"""
+    try:
+        # Look for the best positive performance in available data
+        performance_fields = [
+            ('percent_change_24h', 1.05),    # Recent high, small multiplier
+            ('percent_change_7d', 1.1),     # Weekly high, small multiplier  
+            ('percent_change_30d', 1.2),    # Monthly high, moderate multiplier
+            ('percent_change_60d', 1.3),    # 2-month high, higher multiplier
+            ('percent_change_90d', 1.4),    # Quarterly high, higher multiplier
+        ]
+        
+        best_estimated_high = current_price * 1.5  # Default assumption: at least 50% higher sometime
+        
+        for field, multiplier in performance_fields:
+            performance = crypto_data.get(field)
+            if performance is not None:
+                # If current performance is negative, the high was higher
+                if performance < 0:
+                    # Estimate: if it's down X%, it was probably up more than X% at some point
+                    estimated_peak_performance = abs(performance) * multiplier
+                    estimated_high = current_price * (1 + estimated_peak_performance/100)
+                    best_estimated_high = max(best_estimated_high, estimated_high)
+                else:
+                    # If currently positive, it might have been higher
+                    estimated_peak_performance = performance * multiplier  
+                    estimated_high = current_price / (1 + performance/100) * (1 + estimated_peak_performance/100)
+                    best_estimated_high = max(best_estimated_high, estimated_high)
+        
+        # Additional logic for small caps (higher volatility = higher peaks)
+        market_cap = crypto_data.get('market_cap', 0)
+        if market_cap < 100_000_000:  # <100M market cap
+            volatility_multiplier = 2.0  # Small caps can have 2x higher peaks
+        elif market_cap < 1_000_000_000:  # <1B market cap
+            volatility_multiplier = 1.5
+        else:
+            volatility_multiplier = 1.2
+        
+        best_estimated_high *= volatility_multiplier
+        
+        # Reasonable bounds
+        max_reasonable_high = current_price * 50  # Max 50x from current (extreme but possible in crypto)
+        min_reasonable_high = current_price * 1.2  # At least 20% higher than current
+        
+        return max(min_reasonable_high, min(max_reasonable_high, best_estimated_high))
+        
+    except Exception as e:
+        logger.error(f"Error estimating yearly high: {e}")
+        return current_price * 2  # Default: assume 2x higher at some point
 
 def get_percent_change_for_period(crypto_data: dict, period: TimePeriod):
     """Get percentage change for specified period with multiple data sources"""
