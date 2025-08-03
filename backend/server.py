@@ -432,29 +432,29 @@ def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[Cr
 
 def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
     """Get period-specific weights for scoring components"""
-    if period in [TimePeriod.ONE_HOUR, TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK]:
-        # Short-term: Focus more on momentum and rebound potential
+    if period in [TimePeriod.ONE_HOUR, TimePeriod.TWENTY_FOUR_HOURS]:
+        # Very short-term: Focus heavily on momentum and rebound potential
+        return {
+            'performance': 0.15,
+            'drawdown': 0.10,
+            'rebound': 0.45,
+            'momentum': 0.30
+        }
+    elif period in [TimePeriod.ONE_WEEK, TimePeriod.ONE_MONTH]:
+        # Short to medium-term: Balanced approach with emphasis on rebound
         return {
             'performance': 0.20,
             'drawdown': 0.15,
             'rebound': 0.40,
             'momentum': 0.25
         }
-    elif period in [TimePeriod.ONE_MONTH, TimePeriod.TWO_MONTHS, TimePeriod.THREE_MONTHS]:
-        # Medium-term: Balanced approach
+    else:  # TWO_MONTHS, THREE_MONTHS
+        # Medium to long-term: Focus more on performance and drawdown resistance
         return {
             'performance': 0.25,
-            'drawdown': 0.20,
-            'rebound': 0.35,
-            'momentum': 0.20
-        }
-    else:
-        # Long-term: Focus more on performance and drawdown resistance
-        return {
-            'performance': 0.30,
             'drawdown': 0.25,
             'rebound': 0.30,
-            'momentum': 0.15
+            'momentum': 0.20
         }
 
 def calculate_historical_performance_from_price(current_price: float, historical_price: float) -> float:
