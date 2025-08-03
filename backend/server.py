@@ -738,6 +738,16 @@ async def get_crypto_score(symbol: str, period: TimePeriod):
         logger.error(f"Error getting crypto score: {e}")
         raise HTTPException(status_code=500, detail="Error retrieving crypto score")
 
+@api_router.get("/periods")
+async def get_available_periods():
+    """Get all available time periods"""
+    return {
+        "periods": [
+            {"value": period.value, "label": get_period_label(period)}
+            for period in TimePeriod
+        ]
+    }
+
 @api_router.get("/crypto/{symbol}/historical/{period}")
 async def get_historical_price_info(symbol: str, period: TimePeriod):
     """Get historical price information for debugging and validation"""
