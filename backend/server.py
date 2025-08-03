@@ -48,9 +48,11 @@ class CryptoData(BaseModel):
     market_cap: float
     price: float
     volume_24h: float
+    percent_change_1h: Optional[float] = None
     percent_change_24h: float
     percent_change_7d: float
     percent_change_30d: float
+    percent_change_60d: Optional[float] = None
     percent_change_90d: Optional[float] = None
     percent_change_180d: Optional[float] = None
     percent_change_365d: Optional[float] = None
