@@ -152,6 +152,15 @@ class CryptoAPIService:
                             if not quote.get('percent_change_365d') and coingecko_data.get('percent_change_365d'):
                                 quote['percent_change_365d'] = coingecko_data.get('percent_change_365d')
                                 logger.info(f"✅ Added REAL 365d data for {crypto.get('symbol')}: {coingecko_data.get('percent_change_365d'):.2f}%")
+                                
+                                # Also store the historical price for reference
+                                current_price = quote.get('price', 0)
+                                if current_price > 0:
+                                    historical_price_365d = calculate_historical_price_from_performance(
+                                        current_price, coingecko_data.get('percent_change_365d')
+                                    )
+                                    if historical_price_365d:
+                                        enhanced_crypto['historical_price_365d'] = historical_price_365d
                         
                         # Mark the enhanced crypto with data source info
                         enhanced_crypto['data_sources'] = enhanced_crypto.get('data_sources', ['coinmarketcap'])
