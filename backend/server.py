@@ -243,67 +243,7 @@ class CryptoAPIService:
         
         return None
 
-    async def fetch_yahoo_historical_data(self, session: aiohttp.ClientSession, symbol: str) -> Optional[Dict]:
-        """Fetch historical data from Yahoo Finance as fallback"""
-        try:
-            # Yahoo Finance uses different symbol format for crypto
-            yahoo_symbol = f"{symbol}-USD"
-            
-            # Get 1 year of data
-            url = f"{self.yahoo_base_url}/{yahoo_symbol}"
-            params = {
-                'period1': int((datetime.utcnow() - timedelta(days=365)).timestamp()),
-                'period2': int(datetime.utcnow().timestamp()),
-                'interval': '1d'
-            }
-            
-            async with session.get(url, params=params) as response:
-                if response.status != 200:
-                    return None
-                
-                data = await response.json()
-                chart = data.get('chart', {})
-                results = chart.get('result', [])
-                
-                if not results:
-                    return None
-                
-                result_data = results[0]
-                timestamps = result_data.get('timestamp', [])
-                indicators = result_data.get('indicators', {})
-                quotes = indicators.get('quote', [{}])[0]
-                closes = quotes.get('close', [])
-                
-                if not closes or len(closes) < 180:
-                    return None
-                
-                # Calculate percentage changes
-                current_price = closes[-1]
-                result = {}
-                
-                if len(closes) >= 180:
-                    price_180d = closes[-180]
-                    if price_180d and price_180d > 0:
-                        result['percent_change_180d'] = ((current_price - price_180d) / price_180d) * 100
-                
-                if len(closes) >= 270:
-                    price_270d = closes[-270]
-                    if price_270d and price_270d > 0:
-                        result['percent_change_270d'] = ((current_price - price_270d) / price_270d) * 100
-                
-                if len(closes) >= 365:
-                    price_365d = closes[-365]
-                    if price_365d and price_365d > 0:
-                        result['percent_change_365d'] = ((current_price - price_365d) / price_365d) * 100
-                
-                if result:
-                    logger.info(f"✅ Yahoo Finance: Enhanced {symbol} with historical data")
-                    return result
-                
-        except Exception as e:
-            logger.warning(f"Yahoo Finance error for {symbol}: {e}")
-        
-        return None
+    # Removed Yahoo Finance integration due to rate limiting issues
 
     def calculate_long_term_data(self, crypto_data: Dict) -> Optional[Dict]:
         """Calculate long-term data from available shorter periods as last resort"""
