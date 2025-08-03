@@ -38,8 +38,11 @@ class TimePeriod(str, Enum):
     TWENTY_FOUR_HOURS = "24h"
     ONE_WEEK = "7d"
     ONE_MONTH = "30d"
-    TWO_MONTHS = "60d"  # Available from CMC
+    TWO_MONTHS = "60d"
     THREE_MONTHS = "90d"
+    SIX_MONTHS = "180d"
+    NINE_MONTHS = "270d"
+    ONE_YEAR = "365d"
 
 class CryptoData(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
