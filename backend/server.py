@@ -647,7 +647,10 @@ def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[Cr
             momentum_score * period_weights['momentum']
         )
         
-        logger.debug(f"{crypto_data['symbol']} - {period.value}: P:{performance_score:.1f}, D:{drawdown_score:.1f}, R:{rebound_potential_score:.1f}, M:{momentum_score:.1f}, Total:{total_score:.1f}")
+        # Calculate recovery potential to 75% of yearly high
+        recovery_potential_75, estimated_yearly_high = calculate_recovery_potential_75(crypto_data, crypto_data['price'])
+        
+        logger.debug(f"{crypto_data['symbol']} - {period.value} ({data_source}): P:{performance_score:.1f}, D:{drawdown_score:.1f}, R:{rebound_potential_score:.1f}, M:{momentum_score:.1f}, Total:{total_score:.1f}, Recovery75%: {recovery_potential_75:.1f}% (High: ${estimated_yearly_high:.6f})" if recovery_potential_75 else f"{crypto_data['symbol']} - {period.value} ({data_source}): P:{performance_score:.1f}, D:{drawdown_score:.1f}, R:{rebound_potential_score:.1f}, M:{momentum_score:.1f}, Total:{total_score:.1f}")
         
         return CryptoScore(
             crypto_id=crypto_data['id'],
@@ -657,7 +660,9 @@ def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[Cr
             price=crypto_data['price'],
             period=period,
             period_performance=percent_change,
-            data_source=data_source,  # Include the data source info
+            recovery_potential_75=recovery_potential_75,
+            estimated_yearly_high=estimated_yearly_high,
+            data_source=data_source,
             performance_score=performance_score,
             drawdown_score=drawdown_score,
             rebound_potential_score=rebound_potential_score,
