@@ -98,12 +98,14 @@ const CryptoRankingApp = () => {
   };
 
   const formatRecoveryPotential = (potential) => {
-    if (potential === null || potential === undefined) return 'N/A';
+    if (potential === null || potential === undefined || isNaN(potential)) {
+      return <span className="text-gray-500 text-sm">Calcul...</span>;
+    }
     const value = parseFloat(potential);
-    if (value > 1000) return `+${(value/1000).toFixed(1)}K%`;
-    if (value > 100) return `+${value.toFixed(0)}%`;
-    if (value > 0) return `+${value.toFixed(1)}%`;
-    return `${value.toFixed(1)}%`;
+    if (value > 1000) return <span className="text-green-400 font-bold">+{(value/1000).toFixed(1)}K%</span>;
+    if (value > 100) return <span className="text-green-300 font-semibold">+{value.toFixed(0)}%</span>;
+    if (value > 0) return <span className="text-yellow-400">+{value.toFixed(1)}%</span>;
+    return <span className="text-red-400">{value.toFixed(1)}%</span>;
   };
 
   const getRecoveryPotentialColor = (potential) => {
