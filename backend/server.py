@@ -582,11 +582,16 @@ def get_percent_change_for_period(crypto_data: dict, period: TimePeriod):
     
     field = period_map.get(period)
     if field and crypto_data.get(field) is not None:
-        # Check if this data came from CoinGecko
-        data_sources = crypto_data.get('data_sources', ['coinmarketcap'])
-        if 'coingecko_historical' in data_sources and period in [TimePeriod.SIX_MONTHS, TimePeriod.NINE_MONTHS, TimePeriod.ONE_YEAR]:
-            return crypto_data.get(field), "coingecko"
-        return crypto_data.get(field), "direct"
+        # Check if this is direct data from CoinMarketCap API
+        if period in [TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK, TimePeriod.ONE_MONTH, TimePeriod.THREE_MONTHS]:
+            return crypto_data.get(field), "direct"
+        else:
+            # For longer periods, check if we have enhanced data from CoinGecko
+            data_sources = crypto_data.get('data_sources', [])
+            if 'coingecko_historical' in str(data_sources):
+                return crypto_data.get(field), "coingecko"
+            else:
+                return crypto_data.get(field), "direct"  # Could be CMC data if available
     
     # Fallback calculations for missing long-term data
     if period == TimePeriod.SIX_MONTHS:
