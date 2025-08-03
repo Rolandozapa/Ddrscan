@@ -466,8 +466,14 @@ async def calculate_all_scores():
 def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[CryptoScore]:
     """Calculate comprehensive score for a crypto with enhanced algorithms"""
     try:
-        # Get the appropriate percentage change based on period
-        percent_change = get_percent_change_for_period(crypto_data, period)
+        # Get the appropriate percentage change based on period with source info
+        result = get_percent_change_for_period(crypto_data, period)
+        if isinstance(result, tuple):
+            percent_change, data_source = result
+        else:
+            percent_change = result
+            data_source = "unknown"
+            
         if percent_change is None:
             logger.warning(f"No data available for {crypto_data.get('symbol', 'unknown')} - {period.value}")
             return None
