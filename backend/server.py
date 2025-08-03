@@ -54,8 +54,6 @@ class CryptoData(BaseModel):
     percent_change_30d: float
     percent_change_60d: Optional[float] = None
     percent_change_90d: Optional[float] = None
-    percent_change_180d: Optional[float] = None
-    percent_change_365d: Optional[float] = None
     max_supply: Optional[float] = None
     circulating_supply: float
     total_supply: Optional[float] = None
