@@ -76,6 +76,8 @@ class CryptoScore(BaseModel):
     price: float
     period: TimePeriod
     period_performance: Optional[float] = None  # Actual % change for the period
+    recovery_potential_75: Optional[float] = None  # % gain needed to reach 75% of yearly high
+    estimated_yearly_high: Optional[float] = None  # Estimated max price in past year
     data_source: str = "calculated"  # "direct", "coingecko", "calculated"
     performance_score: float
     drawdown_score: float
