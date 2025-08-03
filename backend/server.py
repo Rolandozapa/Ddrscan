@@ -94,7 +94,7 @@ class CryptoAPIService:
         self.session_timeout = aiohttp.ClientTimeout(total=30)
     
     async def fetch_top_cryptos(self, limit: int = 1000) -> List[Dict[str, Any]]:
-        """Fetch top crypto data from CoinMarketCap API"""
+        """Fetch top crypto data from CoinMarketCap API - using only direct data"""
         try:
             url = f"{CMC_BASE_URL}/v1/cryptocurrency/listings/latest"
             params = {
@@ -108,11 +108,7 @@ class CryptoAPIService:
                 async with session.get(url, headers=self.cmc_headers, params=params) as response:
                     if response.status == 200:
                         data = await response.json()
-                        cryptos = data.get('data', [])
-                        
-                        # Enhance with CoinGecko data for better historical accuracy
-                        enhanced_cryptos = await self.enhance_with_coingecko_data(session, cryptos)
-                        return enhanced_cryptos
+                        return data.get('data', [])  # Return direct CoinMarketCap data only
                     else:
                         logger.error(f"CoinMarketCap API error: {response.status}")
                         return []
