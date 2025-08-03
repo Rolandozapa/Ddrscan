@@ -555,7 +555,7 @@ def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[Cr
 
 def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
     """Get period-specific weights for scoring components"""
-    if period in [TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK]:
+    if period in [TimePeriod.ONE_HOUR, TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK]:
         # Short-term: Focus more on momentum and rebound potential
         return {
             'performance': 0.20,
@@ -563,7 +563,7 @@ def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
             'rebound': 0.40,
             'momentum': 0.25
         }
-    elif period in [TimePeriod.ONE_MONTH, TimePeriod.THREE_MONTHS]:
+    elif period in [TimePeriod.ONE_MONTH, TimePeriod.TWO_MONTHS, TimePeriod.THREE_MONTHS]:
         # Medium-term: Balanced approach
         return {
             'performance': 0.25,
