@@ -612,7 +612,7 @@ def get_percent_change_for_period(crypto_data: dict, period: TimePeriod):
     # Check for direct data first
     if field and crypto_data.get(field) is not None:
         # We have direct data from CoinMarketCap
-        if period in [TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK, TimePeriod.ONE_MONTH, TimePeriod.THREE_MONTHS]:
+        if period in [TimePeriod.ONE_HOUR, TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK, TimePeriod.ONE_MONTH, TimePeriod.TWO_MONTHS, TimePeriod.THREE_MONTHS]:
             return crypto_data.get(field), "direct_cmc"
         else:
             # Check if this came from CoinGecko enhancement
