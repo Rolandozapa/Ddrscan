@@ -457,17 +457,7 @@ def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
             'momentum': 0.20
         }
 
-def calculate_historical_performance_from_price(current_price: float, historical_price: float) -> float:
-    """Calculate percentage change from historical price to current price"""
-    if historical_price <= 0:
-        return None
-    return ((current_price - historical_price) / historical_price) * 100
-
-def calculate_historical_price_from_performance(current_price: float, performance_percent: float) -> float:
-    """Calculate historical price from current price and performance percentage"""
-    if current_price <= 0:
-        return None
-    return current_price / (1 + performance_percent / 100)
+# Simplified approach - using only direct CoinMarketCap percentage data
 
 def get_percent_change_for_period(crypto_data: dict, period: TimePeriod):
     """Get percentage change for specified period - ONLY direct CoinMarketCap data"""
