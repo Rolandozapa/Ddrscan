@@ -293,19 +293,23 @@ const CryptoRankingApp = () => {
           </div>
           
           <div className="mt-6 pt-4 border-t border-gray-700">
-            <h4 className="text-purple-400 font-semibold mb-2">📊 Sources de Données</h4>
-            <div className="grid md:grid-cols-3 gap-4 text-sm">
+            <h4 className="text-purple-400 font-semibold mb-2">📊 Sources de Données & Indicateurs</h4>
+            <div className="grid md:grid-cols-4 gap-4 text-sm">
               <div className="bg-gray-700 p-3 rounded">
-                <span className="text-green-400 font-semibold">✅ Données directes</span>
-                <p className="text-gray-300 mt-1">24h, 7j, 30j depuis CoinMarketCap</p>
+                <span className="text-green-400 font-semibold">✅ Données directes CMC</span>
+                <p className="text-gray-300 mt-1">24h, 7j, 30j, 90j depuis CoinMarketCap</p>
               </div>
               <div className="bg-gray-700 p-3 rounded">
-                <span className="text-blue-400 font-semibold">🧮 Calculées par déduction</span>
-                <p className="text-gray-300 mt-1">6 mois, 9 mois, 1 an avec algorithmes avancés</p>
+                <span className="text-blue-400 font-semibold">🌐 CoinGecko historique</span>
+                <p className="text-gray-300 mt-1">Vraies données historiques sur 1 an</p>
               </div>
               <div className="bg-gray-700 p-3 rounded">
-                <span className="text-purple-400 font-semibold">🔄 Système de fallback</span>
-                <p className="text-gray-300 mt-1">CoinGecko pour données historiques manquantes</p>
+                <span className="text-yellow-400 font-semibold">🧮90d Calculé (90j)</span>
+                <p className="text-gray-300 mt-1">Extrapolation basée sur données 90 jours</p>
+              </div>
+              <div className="bg-gray-700 p-3 rounded">
+                <span className="text-orange-400 font-semibold">🧮30d Calculé (30j)</span>
+                <p className="text-gray-300 mt-1">Estimation basée sur données mensuelles</p>
               </div>
             </div>
           </div>
