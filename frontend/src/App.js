@@ -82,19 +82,23 @@ const CryptoRankingApp = () => {
     return <span className={color}>{sign}{value.toFixed(2)}%</span>;
   };
 
-  const getDataSourceIcon = (source) => {
-    switch (source) {
-      case 'direct_cmc':
-        return '✅';
-      case 'coingecko_historical':
-        return '🌐';
-      case 'yahoo_historical':
-        return '📊';
-      case 'calculated_from_cmc':
-        return '🧮';
-      default:
-        return '❓';
-    }
+  const formatRecoveryPotential = (potential) => {
+    if (potential === null || potential === undefined) return 'N/A';
+    const value = parseFloat(potential);
+    if (value > 1000) return `+${(value/1000).toFixed(1)}K%`;
+    if (value > 100) return `+${value.toFixed(0)}%`;
+    if (value > 0) return `+${value.toFixed(1)}%`;
+    return `${value.toFixed(1)}%`;
+  };
+
+  const getRecoveryPotentialColor = (potential) => {
+    if (potential === null || potential === undefined) return 'text-gray-400';
+    const value = parseFloat(potential);
+    if (value > 500) return 'text-green-400 font-bold';
+    if (value > 200) return 'text-green-300';
+    if (value > 100) return 'text-yellow-400';
+    if (value > 50) return 'text-orange-400';
+    return 'text-red-400';
   };
 
   const getScoreColor = (score) => {
