@@ -159,10 +159,7 @@ class CryptoScoringService:
             TimePeriod.ONE_WEEK: 0.9,
             TimePeriod.ONE_MONTH: 0.8,
             TimePeriod.TWO_MONTHS: 0.75,
-            TimePeriod.THREE_MONTHS: 0.7,
-            TimePeriod.SIX_MONTHS: 0.65,
-            TimePeriod.NINE_MONTHS: 0.6,
-            TimePeriod.ONE_YEAR: 0.55
+            TimePeriod.THREE_MONTHS: 0.7
         }.get(period, 0.8)
         
         # Estimate maximum drawdown based on volatility and performance
