@@ -57,6 +57,10 @@ class CryptoData(BaseModel):
     percent_change_30d: float
     percent_change_60d: Optional[float] = None
     percent_change_90d: Optional[float] = None
+    percent_change_180d: Optional[float] = None  # 6 months - from CoinGecko/Yahoo
+    percent_change_270d: Optional[float] = None  # 9 months - from CoinGecko/Yahoo  
+    percent_change_365d: Optional[float] = None  # 1 year - from CoinGecko/Yahoo
+    data_sources: Optional[List[str]] = None     # Track data sources
     max_supply: Optional[float] = None
     circulating_supply: float
     total_supply: Optional[float] = None
