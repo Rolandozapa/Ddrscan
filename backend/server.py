@@ -567,42 +567,117 @@ def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
             'momentum': 0.15
         }
 
+def calculate_historical_performance_from_price(current_price: float, historical_price: float) -> float:
+    """Calculate percentage change from historical price to current price"""
+    if historical_price <= 0:
+        return None
+    return ((current_price - historical_price) / historical_price) * 100
+
+def calculate_historical_price_from_performance(current_price: float, performance_percent: float) -> float:
+    """Calculate historical price from current price and performance percentage"""
+    if current_price <= 0:
+        return None
+    return current_price / (1 + performance_percent / 100)
+
 def get_percent_change_for_period(crypto_data: dict, period: TimePeriod):
-    """Get percentage change for specified period with source information"""
-    # Direct mapping for available fields
+    """Get percentage change for specified period using available data and calculations"""
+    # Direct mapping for available fields from CoinMarketCap
     period_map = {
         TimePeriod.TWENTY_FOUR_HOURS: 'percent_change_24h',
         TimePeriod.ONE_WEEK: 'percent_change_7d',
         TimePeriod.ONE_MONTH: 'percent_change_30d',
         TimePeriod.THREE_MONTHS: 'percent_change_90d',
-        TimePeriod.SIX_MONTHS: 'percent_change_180d',
-        TimePeriod.NINE_MONTHS: 'percent_change_270d',
-        TimePeriod.ONE_YEAR: 'percent_change_365d'
+        TimePeriod.SIX_MONTHS: 'percent_change_180d',  # Rarely available from CMC
+        TimePeriod.NINE_MONTHS: 'percent_change_270d', # Not available from CMC
+        TimePeriod.ONE_YEAR: 'percent_change_365d'     # Not available from CMC
     }
     
     field = period_map.get(period)
+    
+    # Check for direct data first
     if field and crypto_data.get(field) is not None:
-        # Check if this is direct data from CoinMarketCap API
+        # We have direct data from CoinMarketCap
         if period in [TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK, TimePeriod.ONE_MONTH, TimePeriod.THREE_MONTHS]:
-            return crypto_data.get(field), "direct"
+            return crypto_data.get(field), "direct_cmc"
         else:
-            # For longer periods, check if we have enhanced data from CoinGecko
+            # Check if this came from CoinGecko enhancement
             data_sources = crypto_data.get('data_sources', [])
             if 'coingecko_historical' in str(data_sources):
-                return crypto_data.get(field), "coingecko"
+                return crypto_data.get(field), "coingecko_historical"
             else:
-                return crypto_data.get(field), "direct"  # Could be CMC data if available
+                return crypto_data.get(field), "direct_cmc"
     
-    # Fallback calculations for missing long-term data
+    # For missing long-term data, try to calculate from available shorter periods
+    current_price = crypto_data.get('price', 0)
+    if current_price <= 0:
+        return None, "unavailable"
+    
+    # Try to calculate based on available data
     if period == TimePeriod.SIX_MONTHS:
-        value = calculate_six_month_change(crypto_data)
-        return value, "calculated" if value is not None else "unavailable"
+        # Try to estimate from 90d data
+        change_90d = crypto_data.get('percent_change_90d')
+        if change_90d is not None:
+            # Simple estimation: 6 months ≈ 2 × 90 days with dampening
+            estimated_180d = change_90d * 1.8  # Conservative estimate
+            return max(-95, min(500, estimated_180d)), "calculated_from_90d"
+        
+        # Fallback: estimate from 30d data
+        change_30d = crypto_data.get('percent_change_30d')
+        if change_30d is not None:
+            estimated_180d = change_30d * 5.0  # 6 months ≈ 6 × 30 days, conservative
+            return max(-95, min(500, estimated_180d)), "calculated_from_30d"
+    
     elif period == TimePeriod.NINE_MONTHS:
-        value = calculate_nine_month_change(crypto_data)
-        return value, "calculated" if value is not None else "unavailable"
+        # Try to estimate from 90d data
+        change_90d = crypto_data.get('percent_change_90d')
+        if change_90d is not None:
+            # 9 months ≈ 3 × 90 days with market cycle considerations
+            estimated_270d = change_90d * 2.5
+            return max(-95, min(800, estimated_270d)), "calculated_from_90d"
+        
+        # Fallback: estimate from 30d data
+        change_30d = crypto_data.get('percent_change_30d')
+        if change_30d is not None:
+            estimated_270d = change_30d * 7.0  # Conservative estimate
+            return max(-95, min(800, estimated_270d)), "calculated_from_30d"
+    
     elif period == TimePeriod.ONE_YEAR:
-        value = calculate_one_year_change(crypto_data)
-        return value, "calculated" if value is not None else "unavailable"
+        # Priority 1: Try to calculate from 90d data (most reliable)
+        change_90d = crypto_data.get('percent_change_90d')
+        if change_90d is not None:
+            # 1 year ≈ 4 × 90 days, but crypto markets have cycles
+            if change_90d > 0:
+                # Positive trends tend to moderate over time
+                estimated_365d = change_90d * 3.0
+            else:
+                # Negative trends also moderate but recovery is slower
+                estimated_365d = change_90d * 2.5
+            
+            return max(-95, min(1000, estimated_365d)), "calculated_from_90d"
+        
+        # Priority 2: Calculate from 30d data
+        change_30d = crypto_data.get('percent_change_30d')
+        if change_30d is not None:
+            # 1 year ≈ 12 × 30 days, but apply market reality factor
+            market_cap = crypto_data.get('market_cap', 0)
+            
+            # Adjust multiplier based on market cap (larger = more stable)
+            if market_cap > 10_000_000_000:  # >10B
+                multiplier = 7.0  # More conservative for large caps
+            elif market_cap > 1_000_000_000:  # 1-10B
+                multiplier = 8.0
+            else:  # <1B
+                multiplier = 9.0  # Higher volatility potential
+            
+            estimated_365d = change_30d * multiplier
+            return max(-95, min(1000, estimated_365d)), "calculated_from_30d"
+        
+        # Priority 3: Very conservative estimate from 7d data
+        change_7d = crypto_data.get('percent_change_7d')
+        if change_7d is not None:
+            # Extremely conservative: 1 year ≈ ~50 weeks with heavy dampening
+            estimated_365d = change_7d * 25  # Very conservative multiplier
+            return max(-95, min(500, estimated_365d)), "calculated_from_7d"
     
     return None, "unavailable"
 
