@@ -283,9 +283,11 @@ class CryptoScoringService:
         
         # Period-specific risk adjustments
         period_multiplier = {
+            TimePeriod.ONE_HOUR: 1.1,
             TimePeriod.TWENTY_FOUR_HOURS: 1.0,
             TimePeriod.ONE_WEEK: 0.9,
             TimePeriod.ONE_MONTH: 0.8,
+            TimePeriod.TWO_MONTHS: 0.75,
             TimePeriod.THREE_MONTHS: 0.7,
             TimePeriod.SIX_MONTHS: 0.65,
             TimePeriod.NINE_MONTHS: 0.6,
