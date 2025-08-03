@@ -208,6 +208,7 @@ const CryptoRankingApp = () => {
                     <th className="px-6 py-4 text-center">Score Total</th>
                     <th className="px-6 py-4 text-center">Performance ({period})</th>
                     <th className="px-6 py-4 text-center">Potentiel Récupération 75%</th>
+                    <th className="px-6 py-4 text-center">Performance</th>
                     <th className="px-6 py-4 text-center">Drawdown</th>
                     <th className="px-6 py-4 text-center">Potentiel Rebond</th>
                     <th className="px-6 py-4 text-center">Momentum</th>
