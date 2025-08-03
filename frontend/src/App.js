@@ -294,23 +294,21 @@ const CryptoRankingApp = () => {
           
           <div className="mt-6 pt-4 border-t border-gray-700">
             <h4 className="text-purple-400 font-semibold mb-2">📊 Sources de Données & Indicateurs</h4>
-            <div className="grid md:grid-cols-4 gap-4 text-sm">
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
               <div className="bg-gray-700 p-3 rounded">
                 <span className="text-green-400 font-semibold">✅ Données directes CMC</span>
-                <p className="text-gray-300 mt-1">24h, 7j, 30j, 90j depuis CoinMarketCap</p>
+                <p className="text-gray-300 mt-1">TOUTES les données (1h, 24h, 7j, 30j, 60j, 90j) proviennent directement de CoinMarketCap</p>
               </div>
               <div className="bg-gray-700 p-3 rounded">
-                <span className="text-blue-400 font-semibold">🌐 CoinGecko historique</span>
-                <p className="text-gray-300 mt-1">Vraies données historiques sur 1 an</p>
+                <span className="text-blue-400 font-semibold">🎯 Données 100% exactes</span>
+                <p className="text-gray-300 mt-1">Aucun calcul ni extrapolation - seulement les vraies variations de prix</p>
               </div>
-              <div className="bg-gray-700 p-3 rounded">
-                <span className="text-yellow-400 font-semibold">🧮90d Calculé (90j)</span>
-                <p className="text-gray-300 mt-1">Extrapolation basée sur données 90 jours</p>
-              </div>
-              <div className="bg-gray-700 p-3 rounded">
-                <span className="text-orange-400 font-semibold">🧮30d Calculé (30j)</span>
-                <p className="text-gray-300 mt-1">Estimation basée sur données mensuelles</p>
-              </div>
+            </div>
+            <div className="mt-4 p-3 bg-gradient-to-r from-green-900/30 to-blue-900/30 rounded-lg border border-green-500/30">
+              <h5 className="text-green-300 font-semibold mb-2">✨ Version Simplifiée & Précise</h5>
+              <p className="text-xs text-gray-300">
+                <strong>Périodes disponibles :</strong> 1 heure, 24 heures, 1 semaine, 1 mois, 2 mois, 3 mois (maximum CoinMarketCap)
+              </p>
             </div>
           </div>
           
