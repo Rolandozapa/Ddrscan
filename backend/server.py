@@ -738,15 +738,48 @@ async def get_crypto_score(symbol: str, period: TimePeriod):
         logger.error(f"Error getting crypto score: {e}")
         raise HTTPException(status_code=500, detail="Error retrieving crypto score")
 
-@api_router.get("/periods")
-async def get_available_periods():
-    """Get all available time periods"""
-    return {
-        "periods": [
-            {"value": period.value, "label": get_period_label(period)}
-            for period in TimePeriod
-        ]
-    }
+@api_router.get("/crypto/{symbol}/historical/{period}")
+async def get_historical_price_info(symbol: str, period: TimePeriod):
+    """Get historical price information for debugging and validation"""
+    try:
+        # Get current crypto data
+        crypto = await db.crypto_data.find_one({"symbol": symbol.upper()})
+        if not crypto:
+            raise HTTPException(status_code=404, detail="Crypto not found")
+            
+        current_price = crypto.get('price', 0)
+        result = get_percent_change_for_period(crypto, period)
+        
+        if isinstance(result, tuple):
+            performance, data_source = result
+        else:
+            performance = result
+            data_source = "unknown"
+            
+        if performance is not None and current_price > 0:
+            historical_price = calculate_historical_price_from_performance(current_price, performance)
+            
+            return {
+                "symbol": symbol.upper(),
+                "period": period.value,
+                "current_price": current_price,
+                "performance_percent": performance,
+                "calculated_historical_price": historical_price,
+                "data_source": data_source,
+                "validation_note": f"If the price was ${historical_price:.6f} {period.value} ago, the performance would be {performance:.2f}%"
+            }
+        else:
+            return {
+                "symbol": symbol.upper(),
+                "period": period.value,
+                "error": "No performance data available for this period"
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting historical price info: {e}")
+        raise HTTPException(status_code=500, detail="Error retrieving historical price information")
 
 def get_period_label(period: TimePeriod) -> str:
     """Get human-readable label for time period"""
