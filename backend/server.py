@@ -399,7 +399,7 @@ class CryptoScoringService:
             consistency_bonus = 5
         else:
             # Trend reversal (could be opportunity)
-            consistency_bonus = -5 if period in [TimePeriod.TWENTY_FOUR_HOURS] else 10
+            consistency_bonus = -5 if period in [TimePeriod.ONE_HOUR, TimePeriod.TWENTY_FOUR_HOURS] else 10
         
         return max(0, min(100, base_score + consistency_bonus))
 
