@@ -132,13 +132,13 @@ class CryptoAPIService:
         """Enhance crypto data with historical data from CoinGecko and Yahoo Finance"""
         enhanced_cryptos = []
         
-        # Focus on top 50 cryptos for historical data enhancement to avoid rate limits
-        priority_cryptos = cryptos[:50]
+        # Focus on top 20 cryptos for CoinGecko (to avoid rate limits)
+        priority_cryptos = cryptos[:20]
         
         for i, crypto in enumerate(cryptos):
             enhanced_crypto = crypto.copy()
             
-            # Only enhance priority cryptos with historical data
+            # Only enhance top cryptos with external APIs
             if i < len(priority_cryptos):
                 symbol = crypto.get('symbol', '').upper()
                 
@@ -147,23 +147,29 @@ class CryptoAPIService:
                     coingecko_data = await self.fetch_coingecko_historical_data(session, symbol)
                     if coingecko_data:
                         self.apply_historical_data(enhanced_crypto, coingecko_data, "coingecko")
+                        logger.info(f"✅ Enhanced {symbol} with CoinGecko data")
                     else:
-                        # Fallback to Yahoo Finance
-                        yahoo_data = await self.fetch_yahoo_historical_data(session, symbol)
-                        if yahoo_data:
-                            self.apply_historical_data(enhanced_crypto, yahoo_data, "yahoo")
-                        else:
-                            # Last resort: calculate from available CMC data
-                            calculated_data = self.calculate_long_term_data(crypto)
-                            if calculated_data:
-                                self.apply_historical_data(enhanced_crypto, calculated_data, "calculated")
+                        # Fallback to calculations from CMC data
+                        calculated_data = self.calculate_long_term_data(crypto)
+                        if calculated_data:
+                            self.apply_historical_data(enhanced_crypto, calculated_data, "calculated")
+                            logger.info(f"📊 Enhanced {symbol} with calculated data")
                     
-                    # Add delay every 10 requests to respect rate limits
-                    if i % 10 == 0 and i > 0:
-                        await asyncio.sleep(2)
+                    # Add delay every 5 requests to respect CoinGecko rate limits
+                    if (i + 1) % 5 == 0:
+                        await asyncio.sleep(3)
                         
                 except Exception as e:
                     logger.warning(f"Failed to enhance {symbol} with historical data: {e}")
+                    # Always fallback to calculations
+                    calculated_data = self.calculate_long_term_data(crypto)
+                    if calculated_data:
+                        self.apply_historical_data(enhanced_crypto, calculated_data, "calculated")
+            else:
+                # For cryptos beyond top 20, use calculations only
+                calculated_data = self.calculate_long_term_data(crypto)
+                if calculated_data:
+                    self.apply_historical_data(enhanced_crypto, calculated_data, "calculated")
             
             enhanced_cryptos.append(enhanced_crypto)
         
