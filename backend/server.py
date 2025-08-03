@@ -599,10 +599,7 @@ def get_period_label(period: TimePeriod) -> str:
         TimePeriod.ONE_WEEK: "1 semaine",
         TimePeriod.ONE_MONTH: "1 mois",
         TimePeriod.TWO_MONTHS: "2 mois",
-        TimePeriod.THREE_MONTHS: "3 mois",
-        TimePeriod.SIX_MONTHS: "6 mois",
-        TimePeriod.NINE_MONTHS: "9 mois",
-        TimePeriod.ONE_YEAR: "1 an"
+        TimePeriod.THREE_MONTHS: "3 mois"
     }
     return labels.get(period, period.value)
 
