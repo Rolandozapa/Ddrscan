@@ -82,6 +82,21 @@ const CryptoRankingApp = () => {
     return <span className={color}>{sign}{value.toFixed(2)}%</span>;
   };
 
+  const getDataSourceIcon = (source) => {
+    switch (source) {
+      case 'direct_cmc':
+        return '✅';
+      case 'coingecko_historical':
+        return '🌐';
+      case 'yahoo_historical':
+        return '📊';
+      case 'calculated_from_cmc':
+        return '🧮';
+      default:
+        return '❓';
+    }
+  };
+
   const formatRecoveryPotential = (potential) => {
     if (potential === null || potential === undefined) return 'N/A';
     const value = parseFloat(potential);
