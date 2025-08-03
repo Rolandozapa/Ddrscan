@@ -562,14 +562,17 @@ async def calculate_all_scores():
     """Calculate scores for all time periods"""
     cryptos = await db.crypto_data.find().to_list(None)
     
-    # Only calculate for periods we actually support
+    # All supported periods including long-term with historical data
     supported_periods = [
         TimePeriod.ONE_HOUR,
         TimePeriod.TWENTY_FOUR_HOURS, 
         TimePeriod.ONE_WEEK,
         TimePeriod.ONE_MONTH,
         TimePeriod.TWO_MONTHS,
-        TimePeriod.THREE_MONTHS
+        TimePeriod.THREE_MONTHS,
+        TimePeriod.SIX_MONTHS,      # Historical data from CoinGecko/Yahoo
+        TimePeriod.NINE_MONTHS,     # Historical data from CoinGecko/Yahoo
+        TimePeriod.ONE_YEAR         # Historical data from CoinGecko/Yahoo
     ]
     
     for period in supported_periods:
