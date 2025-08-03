@@ -561,7 +561,7 @@ def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
             'momentum': 0.15
         }
 
-def get_percent_change_for_period(crypto_data: dict, period: TimePeriod) -> tuple[Optional[float], str]:
+def get_percent_change_for_period(crypto_data: dict, period: TimePeriod):
     """Get percentage change for specified period with source information"""
     # Direct mapping for available fields
     period_map = {
