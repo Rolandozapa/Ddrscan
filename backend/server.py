@@ -704,24 +704,41 @@ def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
 # Simplified approach - using only direct CoinMarketCap percentage data
 
 def get_percent_change_for_period(crypto_data: dict, period: TimePeriod):
-    """Get percentage change for specified period - ONLY direct CoinMarketCap data"""
-    # Direct mapping for available fields from CoinMarketCap API
+    """Get percentage change for specified period with multiple data sources"""
+    # Direct mapping for all periods
     period_map = {
         TimePeriod.ONE_HOUR: 'percent_change_1h',
         TimePeriod.TWENTY_FOUR_HOURS: 'percent_change_24h',
         TimePeriod.ONE_WEEK: 'percent_change_7d',
         TimePeriod.ONE_MONTH: 'percent_change_30d',
         TimePeriod.TWO_MONTHS: 'percent_change_60d',
-        TimePeriod.THREE_MONTHS: 'percent_change_90d'
+        TimePeriod.THREE_MONTHS: 'percent_change_90d',
+        TimePeriod.SIX_MONTHS: 'percent_change_180d',
+        TimePeriod.NINE_MONTHS: 'percent_change_270d',
+        TimePeriod.ONE_YEAR: 'percent_change_365d'
     }
     
     field = period_map.get(period)
+    if not field:
+        return None, "unavailable"
     
-    # Return direct data from CoinMarketCap only
-    if field and crypto_data.get(field) is not None:
-        return crypto_data.get(field), "direct_cmc"
+    value = crypto_data.get(field)
+    if value is not None:
+        # Determine data source based on period and available sources
+        data_sources = crypto_data.get('data_sources', ['coinmarketcap'])
+        
+        if period in [TimePeriod.ONE_HOUR, TimePeriod.TWENTY_FOUR_HOURS, TimePeriod.ONE_WEEK, 
+                      TimePeriod.ONE_MONTH, TimePeriod.TWO_MONTHS, TimePeriod.THREE_MONTHS]:
+            return value, "direct_cmc"
+        elif 'coingecko' in data_sources:
+            return value, "coingecko_historical"
+        elif 'yahoo' in data_sources:
+            return value, "yahoo_historical" 
+        elif 'calculated' in data_sources:
+            return value, "calculated_from_cmc"
+        else:
+            return value, "external_source"
     
-    # No calculation fallbacks - only real data
     return None, "unavailable"
 
 # Removed old complex calculation functions - now using simple price/performance relationship
