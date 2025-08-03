@@ -667,38 +667,38 @@ def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[Cr
         return None
 
 def get_period_specific_weights(period: TimePeriod) -> Dict[str, float]:
-    """Get period-specific weights for scoring components"""
+    """OPTIMIZED weights focusing on REBOUND DETECTION"""
     if period in [TimePeriod.ONE_HOUR, TimePeriod.TWENTY_FOUR_HOURS]:
-        # Very short-term: Focus heavily on momentum and rebound potential
+        # Very short-term: Focus HEAVILY on momentum and rebound potential
         return {
-            'performance': 0.15,
-            'drawdown': 0.10,
-            'rebound': 0.45,
-            'momentum': 0.30
+            'performance': 0.10,      # Less important for rebond detection
+            'drawdown': 0.10,         # Less important for rebond detection  
+            'rebound': 0.50,          # CORE: potentiel rebond
+            'momentum': 0.30          # CORE: signes de reprise
         }
     elif period in [TimePeriod.ONE_WEEK, TimePeriod.ONE_MONTH]:
-        # Short to medium-term: Balanced approach with emphasis on rebound
+        # Short to medium-term: Rebound + Momentum focus
         return {
-            'performance': 0.20,
-            'drawdown': 0.15,
-            'rebound': 0.40,
-            'momentum': 0.25
+            'performance': 0.15,      # Reduced importance
+            'drawdown': 0.10,         # Reduced importance
+            'rebound': 0.45,          # PRIMARY: potentiel rebond  
+            'momentum': 0.30          # PRIMARY: momentum de récupération
         }
     elif period in [TimePeriod.TWO_MONTHS, TimePeriod.THREE_MONTHS]:
-        # Medium-term: Balanced approach
+        # Medium-term: Strong rebound focus with some performance consideration
         return {
-            'performance': 0.25,
-            'drawdown': 0.20,
-            'rebound': 0.35,
-            'momentum': 0.20
+            'performance': 0.15,      # Some importance for context
+            'drawdown': 0.15,         # Some importance for risk
+            'rebound': 0.45,          # MAIN: potentiel rebond
+            'momentum': 0.25          # MAIN: momentum analysis
         }
-    else:  # SIX_MONTHS, NINE_MONTHS, ONE_YEAR
-        # Long-term: Focus more on performance and drawdown resistance
+    else:  # SIX_MONTHS, NINE_MONTHS, ONE_YEAR - Long term rebound opportunities
+        # Long-term: Maximum rebound potential focus
         return {
-            'performance': 0.30,
-            'drawdown': 0.25,
-            'rebound': 0.30,
-            'momentum': 0.15
+            'performance': 0.10,      # Minimal - we WANT cryptos that dropped
+            'drawdown': 0.15,         # Some risk assessment
+            'rebound': 0.50,          # MAXIMUM: biggest rebound potential
+            'momentum': 0.25          # Important: early recovery signs
         }
 
 # Simplified approach - using only direct CoinMarketCap percentage data
