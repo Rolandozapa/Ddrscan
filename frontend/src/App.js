@@ -292,28 +292,37 @@ const CryptoRankingApp = () => {
           </div>
         )}
 
-        {/* Enhanced Legend with Data Source Info */}
+        {/* Enhanced Legend with Recovery Potential */}
         <div className="mt-8 bg-gray-800 rounded-xl p-6">
           <h3 className="text-white text-xl font-bold mb-4">📋 Légende du Scoring Amélioré</h3>
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <div className="mb-4">
-                <h4 className="font-semibold text-blue-400 mb-2">🎯 Score de Performance (25-30%)</h4>
-                <p className="text-sm text-gray-300">Analyse avancée avec échelle logarithmique pour les performances positives</p>
+                <h4 className="font-semibold text-blue-400 mb-2">🎯 Score de Performance (10-15%)</h4>
+                <p className="text-sm text-gray-300">Performance actuelle sur la période sélectionnée</p>
               </div>
               <div className="mb-4">
-                <h4 className="font-semibold text-red-400 mb-2">📉 Score Drawdown (15-25%)</h4>
-                <p className="text-sm text-gray-300">Ajustement selon la période avec facteurs de volatilité</p>
+                <h4 className="font-semibold text-red-400 mb-2">📉 Score Drawdown (10-15%)</h4>
+                <p className="text-sm text-gray-300">Résistance aux chutes et gestion du risque</p>
+              </div>
+              <div className="mb-4">
+                <h4 className="font-semibold text-green-400 mb-2">🚀 Potentiel de Rebond (45-50%)</h4>
+                <p className="text-sm text-gray-300">Capacité de récupération basée sur la chute et la capitalisation</p>
               </div>
             </div>
             <div>
               <div className="mb-4">
-                <h4 className="font-semibold text-green-400 mb-2">🚀 Potentiel de Rebond (30-40%)</h4>
-                <p className="text-sm text-gray-300">Considère les cycles de marché et la capitalisation</p>
+                <h4 className="font-semibold text-yellow-400 mb-2">⚡ Score Momentum (25-30%)</h4>
+                <p className="text-sm text-gray-300">Signes de reprise et dynamique récente vs long terme</p>
               </div>
               <div className="mb-4">
-                <h4 className="font-semibold text-yellow-400 mb-2">⚡ Score Momentum (15-25%)</h4>
-                <p className="text-sm text-gray-300">Analyse multi-période avec détection de tendance</p>
+                <h4 className="font-semibold text-purple-400 mb-2">🎯 Potentiel Récupération 75%</h4>
+                <p className="text-sm text-gray-300"><strong>NOUVEAU :</strong> Gain nécessaire pour atteindre 75% du maximum annuel</p>
+                <div className="text-xs text-gray-400 mt-2">
+                  <span className="text-green-400">+500%+</span> = Moonshot potential |
+                  <span className="text-yellow-400"> +100-200%</span> = High potential |
+                  <span className="text-orange-400"> +50-100%</span> = Good potential
+                </div>
               </div>
             </div>
           </div>
@@ -338,20 +347,12 @@ const CryptoRankingApp = () => {
                 <p className="text-gray-300 mt-1">Estimation basée sur données CMC disponibles</p>
               </div>
             </div>
-            <div className="mt-4 p-3 bg-gradient-to-r from-green-900/30 to-blue-900/30 rounded-lg border border-green-500/30">
-              <h5 className="text-green-300 font-semibold mb-2">🎯 Système Multi-Sources Intelligent</h5>
+            <div className="mt-4 p-3 bg-gradient-to-r from-purple-900/30 to-green-900/30 rounded-lg border border-purple-500/30">
+              <h5 className="text-purple-300 font-semibold mb-2">🎯 Focus Bull Run : Potentiel de Récupération</h5>
               <p className="text-xs text-gray-300">
-                <strong>Priorité :</strong> CoinMarketCap → CoinGecko → Yahoo Finance → Calculs sophistiqués
+                <strong>Cette colonne identifie les cryptos avec le plus gros potentiel d'explosion !</strong><br/>
+                Calcul basé sur l'estimation du prix maximum de l'année passée. Plus le potentiel est élevé, plus la crypto a de chance de faire x10 ou plus lors du prochain bull run.
               </p>
-            </div>
-          </div>
-          
-          <div className="mt-4 p-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-lg border border-blue-500/30">
-            <h5 className="text-blue-300 font-semibold mb-2">🎯 Pondérations Dynamiques</h5>
-            <div className="grid md:grid-cols-3 gap-2 text-xs text-gray-300">
-              <div><strong>Court terme (24h-7j):</strong> Focus rebond + momentum</div>
-              <div><strong>Moyen terme (1-3 mois):</strong> Approche équilibrée</div>
-              <div><strong>Long terme (6m-1an):</strong> Performance + résistance</div>
             </div>
           </div>
         </div>
