@@ -538,7 +538,8 @@ def calculate_crypto_score(crypto_data: dict, period: TimePeriod) -> Optional[Cr
             market_cap=market_cap,
             price=crypto_data['price'],
             period=period,
-            period_performance=percent_change,  # Add the actual % change for the period
+            period_performance=percent_change,
+            data_source=data_source,  # Include the data source info
             performance_score=performance_score,
             drawdown_score=drawdown_score,
             rebound_potential_score=rebound_potential_score,
