@@ -1,311 +1,366 @@
-import React, { useState, useEffect } from 'react';
-import './App.css';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import "./App.css";
+import axios from "axios";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Components
-const LoadingSpinner = () => (
-  <div className="flex justify-center items-center p-8">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-  </div>
-);
+const CryptoRankingApp = () => {
+  const [rankings, setRankings] = useState([]);
+  const [period, setPeriod] = useState("24h");
+  const [periods, setPeriods] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-const StatCard = ({ title, value, subtitle, color = "blue" }) => (
-  <div className={`bg-gradient-to-r from-${color}-500 to-${color}-600 rounded-lg p-6 text-white shadow-lg`}>
-    <h3 className="text-lg font-semibold opacity-90">{title}</h3>
-    <p className="text-3xl font-bold mt-2">{value}</p>
-    {subtitle && <p className="text-sm opacity-80 mt-1">{subtitle}</p>}
-  </div>
-);
+  useEffect(() => {
+    fetchPeriods();
+    fetchRankings();
+  }, []);
 
-const CryptoCard = ({ opportunity }) => {
-  const { crypto, opportunity_score, risk_level, recommended_action } = opportunity;
-  
-  const getRiskColor = (risk) => {
-    switch(risk) {
-      case 'LOW': return 'text-green-600 bg-green-100';
-      case 'MEDIUM': return 'text-yellow-600 bg-yellow-100';
-      case 'HIGH': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+  useEffect(() => {
+    if (period) {
+      fetchRankings();
     }
-  };
+  }, [period]);
 
-  const getScoreColor = (score) => {
-    if (score >= 70) return 'text-green-600';
-    if (score >= 50) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  return (
-    <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-xl font-bold text-gray-800">{crypto.symbol}</h3>
-          <p className="text-gray-600">{crypto.name}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-2xl font-bold text-gray-800">
-            ${crypto.current_price.toFixed(4)}
-          </p>
-          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getRiskColor(risk_level)}`}>
-            {risk_level} RISK
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <p className="text-sm text-gray-600">Drawdown</p>
-          <p className="text-lg font-semibold text-red-600">
-            -{crypto.drawdown_percentage.toFixed(1)}%
-          </p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-600">Opportunity Score</p>
-          <p className={`text-lg font-semibold ${getScoreColor(opportunity_score)}`}>
-            {opportunity_score.toFixed(1)}/100
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-        <div>
-          <p className="text-xs text-gray-500">24h</p>
-          <p className={`text-sm font-semibold ${crypto.price_change_percentage_24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {crypto.price_change_percentage_24h >= 0 ? '+' : ''}{crypto.price_change_percentage_24h.toFixed(1)}%
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">7d</p>
-          <p className={`text-sm font-semibold ${crypto.price_change_percentage_7d >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {crypto.price_change_percentage_7d >= 0 ? '+' : ''}{crypto.price_change_percentage_7d.toFixed(1)}%
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">30d</p>
-          <p className={`text-sm font-semibold ${crypto.price_change_percentage_30d >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {crypto.price_change_percentage_30d >= 0 ? '+' : ''}{crypto.price_change_percentage_30d.toFixed(1)}%
-          </p>
-        </div>
-      </div>
-
-      <div className="border-t pt-3">
-        <p className="text-sm font-semibold text-gray-700">Recommendation:</p>
-        <p className="text-sm text-gray-600 mt-1">{recommended_action}</p>
-      </div>
-
-      <div className="flex justify-between items-center mt-3 text-xs text-gray-500">
-        <span>Vol: ${(crypto.volume_24h / 1000000).toFixed(1)}M</span>
-        <span>MCap: ${(crypto.market_cap / 1000000).toFixed(0)}M</span>
-      </div>
-    </div>
-  );
-};
-
-const FilterPanel = ({ filters, setFilters, onApply }) => (
-  <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-    <h3 className="text-lg font-semibold mb-4 text-gray-800">Filters & Settings</h3>
-    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Min Drawdown %</label>
-        <input
-          type="number"
-          value={filters.min_drawdown}
-          onChange={(e) => setFilters({...filters, min_drawdown: parseFloat(e.target.value)})}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Max Drawdown %</label>
-        <input
-          type="number"
-          value={filters.max_drawdown}
-          onChange={(e) => setFilters({...filters, max_drawdown: parseFloat(e.target.value)})}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Min Market Cap (M)</label>
-        <input
-          type="number"
-          value={filters.min_market_cap / 1000000}
-          onChange={(e) => setFilters({...filters, min_market_cap: parseFloat(e.target.value) * 1000000})}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Results</label>
-        <select
-          value={filters.top_n}
-          onChange={(e) => setFilters({...filters, top_n: parseInt(e.target.value)})}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value={20}>Top 20</option>
-          <option value={50}>Top 50</option>
-          <option value={100}>Top 100</option>
-        </select>
-      </div>
-      <div className="flex items-end">
-        <button
-          onClick={onApply}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-        >
-          Apply Filters
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-function App() {
-  const [opportunities, setOpportunities] = useState([]);
-  const [marketStats, setMarketStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    min_drawdown: 10.0,
-    max_drawdown: 80.0,
-    min_market_cap: 1000000,
-    min_volume: 100000,
-    top_n: 50
-  });
-
-  const fetchMarketStats = async () => {
+  const fetchPeriods = async () => {
     try {
-      const response = await axios.get(`${API}/market/stats`);
-      setMarketStats(response.data);
-    } catch (err) {
-      console.error('Error fetching market stats:', err);
+      const response = await axios.get(`${API}/periods`);
+      setPeriods(response.data.periods || []);
+    } catch (error) {
+      console.error("Erreur lors du chargement des périodes:", error);
     }
   };
 
-  const fetchOpportunities = async () => {
+  const fetchRankings = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
-      const response = await axios.post(`${API}/opportunities`, filters);
-      setOpportunities(response.data);
-      
-      await fetchMarketStats();
-    } catch (err) {
-      console.error('Error fetching opportunities:', err);
-      setError('Failed to fetch crypto opportunities. Please try again.');
+      const response = await axios.get(`${API}/rankings/${period}?limit=50`);
+      setRankings(response.data.rankings || []);
+      setLastUpdated(new Date(response.data.last_updated));
+    } catch (error) {
+      console.error("Erreur lors du chargement des classements:", error);
+      setRankings([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchOpportunities();
-  }, []);
-
-  const handleApplyFilters = () => {
-    fetchOpportunities();
+  const refreshData = async () => {
+    try {
+      setRefreshing(true);
+      await axios.post(`${API}/refresh-crypto-data`);
+      // Wait a bit for data to process
+      setTimeout(() => {
+        fetchRankings();
+        setRefreshing(false);
+      }, 3000);
+    } catch (error) {
+      console.error("Erreur lors du rafraîchissement:", error);
+      setRefreshing(false);
+    }
   };
 
-  const handleRefresh = () => {
-    fetchOpportunities();
+  const formatNumber = (num) => {
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+    return num?.toFixed(2) || '0';
+  };
+
+  const formatPrice = (price) => {
+    if (price >= 1) return `$${price.toFixed(2)}`;
+    return `$${price.toFixed(6)}`;
+  };
+
+  const formatPerformance = (performance) => {
+    if (performance === null || performance === undefined) return 'N/A';
+    const value = parseFloat(performance);
+    const sign = value >= 0 ? '+' : '';
+    const color = value >= 0 ? 'text-green-400' : 'text-red-400';
+    return <span className={color}>{sign}{value.toFixed(2)}%</span>;
+  };
+
+  const getDataSourceIcon = (source) => {
+    switch (source) {
+      case 'direct_cmc':
+        return '✅';
+      case 'coingecko_historical':
+        return '🌐';
+      case 'yahoo_historical':
+        return '📊';
+      case 'calculated_from_cmc':
+        return '🧮';
+      default:
+        return '❓';
+    }
+  };
+
+  const formatRecoveryPotential = (potential) => {
+    if (potential === null || potential === undefined || isNaN(potential)) {
+      return <span className="text-gray-500 text-sm">Calcul...</span>;
+    }
+    const value = parseFloat(potential);
+    if (value > 1000) return <span className="text-green-400 font-bold">+{(value/1000).toFixed(1)}K%</span>;
+    if (value > 100) return <span className="text-green-300 font-semibold">+{value.toFixed(0)}%</span>;
+    if (value > 0) return <span className="text-yellow-400">+{value.toFixed(1)}%</span>;
+    return <span className="text-red-400">{value.toFixed(1)}%</span>;
+  };
+
+  const getRecoveryPotentialColor = (potential) => {
+    if (potential === null || potential === undefined) return 'text-gray-400';
+    const value = parseFloat(potential);
+    if (value > 500) return 'text-green-400 font-bold';
+    if (value > 200) return 'text-green-300';
+    if (value > 100) return 'text-yellow-400';
+    if (value > 50) return 'text-orange-400';
+    return 'text-red-400';
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 80) return 'text-green-600 bg-green-100';
+    if (score >= 60) return 'text-blue-600 bg-blue-100';
+    if (score >= 40) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  const getRankBadgeColor = (rank) => {
+    if (rank === 1) return 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white';
+    if (rank === 2) return 'bg-gradient-to-r from-gray-300 to-gray-500 text-white';
+    if (rank === 3) return 'bg-gradient-to-r from-amber-600 to-amber-800 text-white';
+    if (rank <= 10) return 'bg-gradient-to-r from-green-400 to-green-600 text-white';
+    return 'bg-gradient-to-r from-blue-400 to-blue-600 text-white';
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">DDRscan</h1>
-              <p className="text-gray-600">Crypto Drawdown & Rebound Scanner</p>
-            </div>
-            <button
-              onClick={handleRefresh}
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 font-medium"
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-4">
+            🚀 CryptoRebound Ranking
+          </h1>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            Découvrez les meilleures opportunités de rebond crypto basées sur notre algorithme de scoring avancé
+          </p>
+        </div>
+
+        {/* Controls */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 space-y-4 md:space-y-0">
+          <div className="flex items-center space-x-4">
+            <label className="text-white font-semibold">Période:</label>
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="bg-gray-800 text-white border border-gray-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              {loading ? 'Refreshing...' : 'Refresh Data'}
+              {periods.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            {lastUpdated && (
+              <span className="text-gray-400 text-sm">
+                Dernière mise à jour: {lastUpdated.toLocaleString('fr-FR')}
+              </span>
+            )}
+            <button
+              onClick={refreshData}
+              disabled={refreshing}
+              className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 disabled:opacity-50"
+            >
+              {refreshing ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Actualisation...
+                </div>
+              ) : (
+                '🔄 Actualiser'
+              )}
             </button>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Market Stats */}
-        {marketStats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <StatCard
-              title="Total Analyzed"
-              value={marketStats.total_cryptos_analyzed}
-              subtitle="Cryptocurrencies"
-              color="blue"
-            />
-            <StatCard
-              title="Opportunities"
-              value={marketStats.total_opportunities}
-              subtitle="Above threshold"
-              color="green"
-            />
-            <StatCard
-              title="High Score"
-              value={marketStats.high_score_opportunities}
-              subtitle="Score > 50"
-              color="purple"
-            />
-            <StatCard
-              title="Market Sentiment"
-              value={marketStats.market_sentiment}
-              subtitle={`Avg DD: ${marketStats.average_drawdown}%`}
-              color={marketStats.market_sentiment === 'Bullish' ? 'green' : marketStats.market_sentiment === 'Bearish' ? 'red' : 'yellow'}
-            />
+        {/* Loading */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="text-white mt-4">Chargement des données...</p>
           </div>
         )}
 
-        {/* Filters */}
-        <FilterPanel
-          filters={filters}
-          setFilters={setFilters}
-          onApply={handleApplyFilters}
-        />
-
-        {/* Content */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
+        {/* Rankings Table */}
+        {!loading && rankings.length > 0 && (
+          <div className="bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-white">
+                <thead className="bg-gradient-to-r from-gray-700 to-gray-800">
+                  <tr>
+                    <th className="px-6 py-4 text-left">Rang</th>
+                    <th className="px-6 py-4 text-left">Crypto</th>
+                    <th className="px-6 py-4 text-right">Prix</th>
+                    <th className="px-6 py-4 text-right">Market Cap</th>
+                    <th className="px-6 py-4 text-center">Score Total</th>
+                    <th className="px-6 py-4 text-center">Performance ({period})</th>
+                    <th className="px-6 py-4 text-center">Potentiel Récupération 75%</th>
+                    <th className="px-6 py-4 text-center">Drawdown</th>
+                    <th className="px-6 py-4 text-center">Potentiel Rebond</th>
+                    <th className="px-6 py-4 text-center">Momentum</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {rankings.map((crypto, index) => (
+                    <tr key={crypto.id} className="hover:bg-gray-700 transition duration-300">
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${getRankBadgeColor(crypto.rank)}`}>
+                          {crypto.rank}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="font-bold text-white">{crypto.symbol}</div>
+                          <div className="text-gray-400 text-sm truncate max-w-32">{crypto.name}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono">
+                        {formatPrice(crypto.price)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        ${formatNumber(crypto.market_cap)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(crypto.total_score)}`}>
+                          {crypto.total_score.toFixed(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          {formatPerformance(crypto.period_performance)}
+                          <div className="text-xs text-gray-400 mt-1" title={`Source: ${crypto.data_source}`}>
+                            {getDataSourceIcon(crypto.data_source)}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          {formatRecoveryPotential(crypto.recovery_potential_75)}
+                          {crypto.recovery_potential_75 && crypto.recovery_potential_75 > 500 && (
+                            <div className="text-xs text-green-400 mt-1">🚀 MOONSHOT</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-sm font-mono">
+                          {crypto.drawdown_score.toFixed(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-sm font-mono">
+                          {crypto.rebound_potential_score.toFixed(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-sm font-mono">
+                          {crypto.momentum_score.toFixed(1)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
-        {loading ? (
-          <LoadingSpinner />
-        ) : (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Rebound Opportunities ({opportunities.length})
-              </h2>
-              <p className="text-gray-600">
-                Last updated: {new Date().toLocaleTimeString()}
+        {/* Empty State */}
+        {!loading && rankings.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📊</div>
+            <h3 className="text-2xl font-bold text-white mb-2">Aucune donnée disponible</h3>
+            <p className="text-gray-400 mb-6">
+              Cliquez sur "Actualiser" pour charger les données depuis CoinMarketCap
+            </p>
+            <button
+              onClick={refreshData}
+              className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300"
+            >
+              🔄 Charger les données
+            </button>
+          </div>
+        )}
+
+        {/* Enhanced Legend with Recovery Potential */}
+        <div className="mt-8 bg-gray-800 rounded-xl p-6">
+          <h3 className="text-white text-xl font-bold mb-4">📋 Légende du Scoring Amélioré</h3>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <div className="mb-4">
+                <h4 className="font-semibold text-blue-400 mb-2">🎯 Score de Performance (10-15%)</h4>
+                <p className="text-sm text-gray-300">Performance actuelle sur la période sélectionnée</p>
+              </div>
+              <div className="mb-4">
+                <h4 className="font-semibold text-red-400 mb-2">📉 Score Drawdown (10-15%)</h4>
+                <p className="text-sm text-gray-300">Résistance aux chutes et gestion du risque</p>
+              </div>
+              <div className="mb-4">
+                <h4 className="font-semibold text-green-400 mb-2">🚀 Potentiel de Rebond (45-50%)</h4>
+                <p className="text-sm text-gray-300">Capacité de récupération basée sur la chute et la capitalisation</p>
+              </div>
+            </div>
+            <div>
+              <div className="mb-4">
+                <h4 className="font-semibold text-yellow-400 mb-2">⚡ Score Momentum (25-30%)</h4>
+                <p className="text-sm text-gray-300">Signes de reprise et dynamique récente vs long terme</p>
+              </div>
+              <div className="mb-4">
+                <h4 className="font-semibold text-purple-400 mb-2">🎯 Potentiel Récupération 75%</h4>
+                <p className="text-sm text-gray-300"><strong>NOUVEAU :</strong> Gain nécessaire pour atteindre 75% du maximum annuel</p>
+                <div className="text-xs text-gray-400 mt-2">
+                  <span className="text-green-400">+500%+</span> = Moonshot potential |
+                  <span className="text-yellow-400"> +100-200%</span> = High potential |
+                  <span className="text-orange-400"> +50-100%</span> = Good potential
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-6 pt-4 border-t border-gray-700">
+            <h4 className="text-purple-400 font-semibold mb-2">📊 Sources de Données Améliorées</h4>
+            <div className="grid md:grid-cols-4 gap-4 text-sm">
+              <div className="bg-gray-700 p-3 rounded">
+                <span className="text-green-400 font-semibold">✅ CoinMarketCap</span>
+                <p className="text-gray-300 mt-1">1h, 24h, 7j, 30j, 60j, 90j - Données directes</p>
+              </div>
+              <div className="bg-gray-700 p-3 rounded">
+                <span className="text-blue-400 font-semibold">🌐 CoinGecko</span>
+                <p className="text-gray-300 mt-1">6 mois, 9 mois, 1 an - Données historiques réelles</p>
+              </div>
+              <div className="bg-gray-700 p-3 rounded">
+                <span className="text-yellow-400 font-semibold">📊 Yahoo Finance</span>
+                <p className="text-gray-300 mt-1">Fallback pour données crypto historiques</p>
+              </div>
+              <div className="bg-gray-700 p-3 rounded">
+                <span className="text-orange-400 font-semibold">🧮 Calculé</span>
+                <p className="text-gray-300 mt-1">Estimation basée sur données CMC disponibles</p>
+              </div>
+            </div>
+            <div className="mt-4 p-3 bg-gradient-to-r from-purple-900/30 to-green-900/30 rounded-lg border border-purple-500/30">
+              <h5 className="text-purple-300 font-semibold mb-2">🎯 Focus Bull Run : Potentiel de Récupération</h5>
+              <p className="text-xs text-gray-300">
+                <strong>Cette colonne identifie les cryptos avec le plus gros potentiel d'explosion !</strong><br/>
+                Calcul basé sur l'estimation du prix maximum de l'année passée. Plus le potentiel est élevé, plus la crypto a de chance de faire x10 ou plus lors du prochain bull run.
               </p>
             </div>
-
-            {opportunities.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No opportunities found with current filters.</p>
-                <p className="text-gray-400">Try adjusting your filter criteria.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {opportunities.map((opportunity, index) => (
-                  <CryptoCard key={opportunity.crypto.id || index} opportunity={opportunity} />
-                ))}
-              </div>
-            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
-}
+};
 
-export default App;
+export default CryptoRankingApp;
